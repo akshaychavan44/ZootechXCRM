@@ -1527,16 +1527,8 @@ export default function DeveloperWorkspace({
             </nav>
 
             {/* Bottom Actions */}
-            <div className="p-4 border-t border-inherit space-y-2">
-              <button
-                onClick={handleToggleTheme}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition ${dark ? "bg-white/5 text-slate-300 hover:bg-white/10" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
-              >
-                {dark ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-indigo-600" />}
-                <span>{dark ? "Light Mode" : "Dark Mode"}</span>
-              </button>
-
-              {onLogout && (
+            {onLogout && (
+              <div className="p-4 border-t border-inherit space-y-2">
                 <button
                   onClick={onLogout}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"
@@ -1544,8 +1536,8 @@ export default function DeveloperWorkspace({
                   <LogOut size={15} />
                   <span>Log out</span>
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </aside>
 
           {/* MAIN VIEWPORT */}
