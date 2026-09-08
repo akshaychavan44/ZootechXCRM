@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckSquare, Plus, Search, CheckCircle2, AlertCircle, X,
-  Clock, User, Tag, Calendar, RefreshCw, ChevronRight, AlertTriangle
+  Clock, User, Tag, Calendar, RefreshCw, ChevronRight, AlertTriangle, Eye
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
 
@@ -44,7 +44,15 @@ const statusStyles = {
   COMPLETED: { bg: "bg-emerald-500/10", text: "text-emerald-400", label: "Completed" },
 };
 
-export default function UniversalTasksWorkspace({ dark = true }: { dark?: boolean }) {
+export default function UniversalTasksWorkspace({
+  dark = true,
+  canCreate = true,
+  canUpdateStatus = false,
+}: {
+  dark?: boolean;
+  canCreate?: boolean;
+  canUpdateStatus?: boolean;
+}) {
   const [tasks, setTasks] = useState<CompanyTask[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,6 +62,7 @@ export default function UniversalTasksWorkspace({ dark = true }: { dark?: boolea
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [viewTask, setViewTask] = useState<CompanyTask | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Form State
@@ -221,15 +230,17 @@ export default function UniversalTasksWorkspace({ dark = true }: { dark?: boolea
           >
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
           </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className={`h-10 px-4 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md ${
-              dark ? "bg-[#cca45f] text-black hover:bg-[#d8b26e]" : "bg-[#a07432] text-white hover:bg-[#8f6426]"
-            }`}
-          >
-            <Plus size={15} />
-            <span>Create Task</span>
-          </button>
+          {canCreate && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className={`h-10 px-4 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md ${
+                dark ? "bg-[#cca45f] text-black hover:bg-[#d8b26e]" : "bg-[#a07432] text-white hover:bg-[#8f6426]"
+              }`}
+            >
+              <Plus size={15} />
+              <span>Create Task</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -293,7 +304,8 @@ export default function UniversalTasksWorkspace({ dark = true }: { dark?: boolea
                 key={task.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`rounded-2xl border p-4 ${cardBg} shadow-sm flex flex-col justify-between hover:border-[#cca45f]/40 transition`}
+                onClick={() => setViewTask(task)}
+                className={`rounded-2xl border p-4 ${cardBg} shadow-sm flex flex-col justify-between hover:border-[#cca45f]/60 hover:shadow-md cursor-pointer transition`}
               >
                 <div>
                   <div className="flex items-center justify-between gap-2">
@@ -308,30 +320,49 @@ export default function UniversalTasksWorkspace({ dark = true }: { dark?: boolea
                   <h4 className={`mt-3 font-semibold text-sm leading-snug ${dark ? "text-[#f1f5f9]" : "text-[#1c1917]"}`}>
                     {task.title}
                   </h4>
-                  <p className={`mt-1.5 text-xs line-clamp-2 ${muted}`}>
+                  <p className={`mt-1.5 text-xs line-clamp-2 leading-relaxed ${muted}`}>
                     {task.description}
                   </p>
 
-                  {task.related_name && (
-                    <div className="mt-3 flex items-center gap-1.5 text-[11px] font-medium text-[#cca45f]">
-                      <Tag size={12} />
-                      <span className="truncate">{task.related_name} ({task.related_type})</span>
+                  <div className="mt-3 pt-2.5 border-t border-inherit/60 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                    <div className={`flex items-center gap-1.5 ${muted}`}>
+                      <User size={12} className="text-[#cca45f]" />
+                      <span>Created by: <strong className={`font-semibold ${dark ? "text-slate-200" : "text-slate-800"}`}>{task.created_by_name || "Super Admin"}</strong></span>
                     </div>
-                  )}
+                    {task.related_name && (
+                      <div className="flex items-center gap-1 font-medium text-[#cca45f]">
+                        <Tag size={12} />
+                        <span className="truncate max-w-[140px]">{task.related_name} ({task.related_type})</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-inherit flex items-center justify-between">
+                <div className="mt-3 pt-3 border-t border-inherit flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="h-6 w-6 rounded-full bg-indigo-600/20 text-indigo-400 font-bold text-[10px] flex items-center justify-center">
                       {task.assigned_to_name.slice(0, 1).toUpperCase()}
                     </div>
-                    <span className={`text-[11px] font-medium truncate max-w-[100px] ${muted}`}>
-                      {task.assigned_to_name}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] uppercase tracking-wider text-slate-400 font-medium leading-none">Assignee</span>
+                      <span className={`text-[11px] font-medium truncate max-w-[100px] leading-tight mt-0.5 ${dark ? "text-slate-200" : "text-slate-800"}`}>
+                        {task.assigned_to_name}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
-                    {task.status !== "COMPLETED" && (
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      title="View Details"
+                      onClick={() => setViewTask(task)}
+                      className={`h-7 px-2.5 rounded-lg text-[10px] font-semibold transition border flex items-center gap-1 ${
+                        dark ? "border-slate-700 text-slate-300 hover:bg-white/10" : "border-slate-200 text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      <Eye size={12} />
+                      <span>View</span>
+                    </button>
+                    {canUpdateStatus && task.status !== "COMPLETED" && (
                       <button
                         title="Mark Completed"
                         onClick={() => handleStatusChange(task, "COMPLETED")}
@@ -342,7 +373,7 @@ export default function UniversalTasksWorkspace({ dark = true }: { dark?: boolea
                         Complete
                       </button>
                     )}
-                    {task.status === "TO_DO" && (
+                    {canUpdateStatus && task.status === "TO_DO" && (
                       <button
                         title="Start Progress"
                         onClick={() => handleStatusChange(task, "IN_PROGRESS")}
@@ -487,6 +518,141 @@ export default function UniversalTasksWorkspace({ dark = true }: { dark?: boolea
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* TASK DETAILS MODAL */}
+      <AnimatePresence>
+        {viewTask && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setViewTask(null)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              onClick={(e) => e.stopPropagation()}
+              className={`w-full max-w-xl rounded-3xl border p-6 shadow-2xl ${cardBg}`}
+            >
+              {/* Modal Header */}
+              <div className="flex items-start justify-between gap-3 pb-4 border-b border-inherit">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${priorityStyles[viewTask.priority]?.bg} ${priorityStyles[viewTask.priority]?.text} ${priorityStyles[viewTask.priority]?.border}`}>
+                      {viewTask.priority} PRIORITY
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${statusStyles[viewTask.status]?.bg} ${statusStyles[viewTask.status]?.text}`}>
+                      {statusStyles[viewTask.status]?.label}
+                    </span>
+                    {viewTask.related_name && (
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-[#cca45f]">
+                        <Tag size={12} />
+                        {viewTask.related_name} ({viewTask.related_type})
+                      </span>
+                    )}
+                  </div>
+                  <h3 className={`text-lg font-bold ${dark ? "text-white" : "text-slate-900"}`}>
+                    {viewTask.title}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setViewTask(null)}
+                  className={`h-8 w-8 rounded-full flex items-center justify-center border transition ${dark ? "border-slate-700 text-slate-400 hover:text-white hover:bg-white/10" : "border-slate-200 text-slate-500 hover:text-black hover:bg-slate-100"}`}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="py-4 space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+                {/* Full Description */}
+                <div>
+                  <label className={`text-[11px] font-bold uppercase tracking-wider ${muted}`}>Full Description</label>
+                  <div className={`mt-1.5 p-4 rounded-2xl border text-xs leading-relaxed whitespace-pre-wrap ${dark ? "bg-[#171f30] border-[#222d42] text-slate-200" : "bg-[#fcfaf7] border-[#e5dcd0] text-slate-800"}`}>
+                    {viewTask.description || "No description provided."}
+                  </div>
+                </div>
+
+                {/* Metadata Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className={`p-3.5 rounded-2xl border ${dark ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200"}`}>
+                    <div className={`text-[10px] uppercase font-bold tracking-wider ${muted} flex items-center gap-1.5`}>
+                      <User size={12} className="text-[#cca45f]" />
+                      Created By
+                    </div>
+                    <div className={`mt-1.5 font-semibold text-sm ${dark ? "text-white" : "text-slate-900"}`}>
+                      {viewTask.created_by_name || "Super Admin"}
+                    </div>
+                    <div className={`mt-1 text-[10px] font-mono ${muted}`}>
+                      Created: {new Date(viewTask.created_at).toLocaleDateString()} at {new Date(viewTask.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+
+                  <div className={`p-3.5 rounded-2xl border ${dark ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200"}`}>
+                    <div className={`text-[10px] uppercase font-bold tracking-wider ${muted} flex items-center gap-1.5`}>
+                      <CheckSquare size={12} className="text-indigo-400" />
+                      Assigned To
+                    </div>
+                    <div className={`mt-1.5 font-semibold text-sm ${dark ? "text-white" : "text-slate-900"}`}>
+                      {viewTask.assigned_to_name}
+                    </div>
+                    {viewTask.due_date ? (
+                      <div className={`mt-1 text-[10px] font-mono ${muted} flex items-center gap-1`}>
+                        <Calendar size={11} />
+                        Due: {new Date(viewTask.due_date).toLocaleDateString()}
+                      </div>
+                    ) : (
+                      <div className={`mt-1 text-[10px] ${muted}`}>No due date set</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Status Update */}
+                {canUpdateStatus ? (
+                  <div className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${dark ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200"}`}>
+                    <div>
+                      <div className={`text-[11px] font-bold ${dark ? "text-white" : "text-slate-900"}`}>Update Task Status</div>
+                      <div className={`text-[11px] ${muted}`}>Move this task across workflow stages</div>
+                    </div>
+                    <select
+                      value={viewTask.status}
+                      onChange={(e) => {
+                        const newStatus = e.target.value as CompanyTask["status"];
+                        handleStatusChange(viewTask, newStatus);
+                        setViewTask({ ...viewTask, status: newStatus });
+                      }}
+                      className={`h-9 px-3 rounded-xl border text-xs font-semibold outline-none cursor-pointer ${inputBg}`}
+                    >
+                      <option value="TO_DO">To Do</option>
+                      <option value="IN_PROGRESS">In Progress</option>
+                      <option value="REVIEW">Review</option>
+                      <option value="BLOCKED">Blocked</option>
+                      <option value="COMPLETED">Completed</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between ${dark ? "bg-white/5 border-white/10 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
+                    <span className="font-medium">Task Status: <span className="font-semibold text-[#cca45f]">{statusStyles[viewTask.status]?.label || viewTask.status}</span></span>
+                    <span className="text-[11px] opacity-75">Updated by Assignee ({viewTask.assigned_to_name})</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="pt-4 border-t border-inherit flex items-center justify-between">
+                <span className={`text-[10px] font-mono ${muted}`}>
+                  Task ID: {viewTask.id.slice(0, 8)}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setViewTask(null)}
+                    className={`px-5 py-2 rounded-xl text-xs font-semibold border transition ${dark ? "border-[#222d42] hover:bg-white/5" : "border-[#eee6da] hover:bg-slate-100"}`}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

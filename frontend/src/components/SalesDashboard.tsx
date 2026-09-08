@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, CalendarDays, ClipboardList, Search,
   Sun, Moon, ShieldCheck, Phone, Mail, Clock, ExternalLink,
-  ChevronRight, Filter, LogOut, CheckCircle2, AlertCircle, Building, X
+  ChevronRight, Filter, LogOut, CheckCircle2, AlertCircle, Building, X, Megaphone
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import ScopeOfWorkWorkspace from "./ScopeOfWorkWorkspace";
 import UniversalTasksWorkspace from "./UniversalTasksWorkspace";
+import DigitalMarketingWorkspace from "./DigitalMarketingWorkspace";
 
 interface SalesDashboardProps {
   onLogout: () => void;
@@ -47,6 +48,7 @@ type Client = {
   email: string | null;
   phone: string | null;
   gst_number: string | null;
+  projects?: Array<{ id: string; title: string; name: string; status: string; category?: string; budget?: number; deadline?: string }>;
 };
 
 export default function SalesDashboard({ onLogout, dark: propDark = true, onToggleTheme }: SalesDashboardProps) {
@@ -118,6 +120,23 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
     const interval = window.setInterval(() => void load(), 12000);
     return () => window.clearInterval(interval);
   }, []);
+
+  const handleUpdateFollowupStatus = async (followupId: string, newStatus: string) => {
+    setFollowups((prev) =>
+      prev.map((f) => (f.id === followupId ? { ...f, status: newStatus } : f))
+    );
+    try {
+      const res = await apiFetch(`/api/followups/${followupId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      setNotice(`Follow-up status updated to ${newStatus}`);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Failed to update status");
+      void load();
+    }
+  };
 
   const filteredLeads = useMemo(() => {
     return leads.filter((l) => {
@@ -232,16 +251,6 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
 
         {/* Bottom Actions */}
         <div className="p-4 border-t border-inherit space-y-2">
-          <button
-            onClick={() => setDark(!dark)}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold ${
-              dark ? "bg-white/5 text-slate-300 hover:bg-white/10" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
-          >
-            {dark ? <Sun size={15} /> : <Moon size={15} />}
-            <span>{dark ? "Light Mode" : "Dark Mode"}</span>
-          </button>
-
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"
@@ -445,9 +454,33 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                           </td>
                           <td className={`p-3.5 text-xs ${dark ? "text-slate-200" : "text-slate-800"}`}>{f.assigned_to || "Team"}</td>
                           <td className="p-3.5">
-                            <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-400">
-                              {f.status}
-                            </span>
+                            <select
+                              value={f.status}
+                              onChange={(e) => void handleUpdateFollowupStatus(f.id, e.target.value)}
+                              className={`h-7 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border cursor-pointer outline-none transition ${
+                                f.status === "Completed"
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                  : f.status === "Converted"
+                                  ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                                  : f.status === "Contacted"
+                                  ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                                  : f.status === "Overdue"
+                                  ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                                  : f.status === "Rescheduled"
+                                  ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30"
+                                  : f.status === "Cancelled"
+                                  ? "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30"
+                                  : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                              }`}
+                            >
+                              <option value="Scheduled" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Scheduled</option>
+                              <option value="Contacted" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Contacted</option>
+                              <option value="Completed" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Completed</option>
+                              <option value="Converted" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Converted</option>
+                              <option value="Rescheduled" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Rescheduled</option>
+                              <option value="Cancelled" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Cancelled</option>
+                              <option value="Overdue" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Overdue</option>
+                            </select>
                           </td>
                         </tr>
                       ))}
@@ -491,6 +524,24 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                     <div className="mt-4 pt-3 border-t border-inherit text-[11px] font-mono text-slate-400">
                       GSTIN: {client.gst_number || "Unregistered"}
                     </div>
+
+                    {client.projects && client.projects.length > 0 && (
+                      <div className="mt-3 pt-2.5 border-t border-inherit">
+                        <div className={`text-[10px] font-semibold uppercase tracking-wider ${mutedText} mb-1.5`}>
+                          Active Projects ({client.projects.length})
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {client.projects.map((p) => (
+                            <span
+                              key={p.id}
+                              className="px-2 py-0.5 rounded-lg text-[10px] font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                            >
+                              {p.title || p.name} • <span className="font-bold">{p.status}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -507,7 +558,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
           {/* TAB 5: ASSIGNED TASKS */}
           {page === "tasks" && (
             <div className="max-w-[1600px] mx-auto w-full">
-              <UniversalTasksWorkspace dark={dark} />
+              <UniversalTasksWorkspace dark={dark} canCreate={false} canUpdateStatus={true} />
             </div>
           )}
         </main>

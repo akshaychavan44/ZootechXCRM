@@ -1,4 +1,6 @@
+import { mkdir, readFile, rename, writeFile } from "fs/promises";
 import { randomUUID } from "crypto";
+import path from "path";
 
 export type MarketingCampaign = {
   id: string;
@@ -49,10 +51,57 @@ export type MarketingLead = {
   created_at: string;
 };
 
+export type MarketingClient = {
+  id: string;
+  name: string;
+  industry: string;
+  contact_name: string;
+  contact_email: string;
+  monthly_retainer: number;
+  status: "ACTIVE" | "ONBOARDING" | "PAUSED";
+  website?: string;
+  created_at: string;
+};
+
+export type MarketingClientProject = {
+  id: string;
+  client_id: string;
+  client_name: string;
+  title: string;
+  category: "Paid Search" | "Paid Social" | "SEO & Content" | "Brand & Creative" | "Email & CRM";
+  budget: number;
+  spend: number;
+  target_roas: number;
+  current_roas: number;
+  status: "PLANNING" | "IN_PROGRESS" | "IN_REVIEW" | "ACTIVE" | "COMPLETED";
+  deadline: string;
+  deliverables: string;
+  created_at: string;
+};
+
+export type MarketingClientAsset = {
+  id: string;
+  client_id: string;
+  client_name: string;
+  project_id?: string | null;
+  project_title?: string | null;
+  name: string;
+  asset_type: "Ad Creative" | "Video Script" | "Copywriting" | "Brand Asset" | "Landing Page" | "Report";
+  file_format: "Figma" | "Video / MP4" | "Graphic / PNG" | "PDF" | "Drive / Doc";
+  asset_url: string;
+  status: "APPROVED" | "IN_REVIEW" | "NEEDS_REVISION" | "DRAFT";
+  version: string;
+  notes?: string;
+  created_at: string;
+};
+
 type FallbackMarketingStore = {
   campaigns: MarketingCampaign[];
   creatives: MarketingCreative[];
   leads: MarketingLead[];
+  clients: MarketingClient[];
+  projects: MarketingClientProject[];
+  assets: MarketingClientAsset[];
 };
 
 const initialCampaigns: MarketingCampaign[] = [
@@ -280,266 +329,6 @@ const initialLeads: MarketingLead[] = [
   },
 ];
 
-const store: FallbackMarketingStore = {
-  campaigns: [...initialCampaigns],
-  creatives: [...initialCreatives],
-  leads: [...initialLeads],
-};
-
-export async function getMarketingOverview() {
-  const totalSpend = store.campaigns.reduce((sum, c) => sum + Number(c.spend), 0);
-  const totalBudget = store.campaigns.reduce((sum, c) => sum + Number(c.budget), 0);
-  const totalClicks = store.campaigns.reduce((sum, c) => sum + Number(c.clicks), 0);
-  const totalImpressions = store.campaigns.reduce((sum, c) => sum + Number(c.impressions), 0);
-  const totalConversions = store.campaigns.reduce((sum, c) => sum + Number(c.conversions), 0);
-
-  // Attributed revenue calculation based on campaign ROAS * spend
-  const attributedRevenue = store.campaigns.reduce(
-    (sum, c) => sum + Number(c.spend) * Number(c.roas),
-    0
-  );
-  const blendedRoas = totalSpend > 0 ? Number((attributedRevenue / totalSpend).toFixed(2)) : 0;
-  const avgCtr = totalImpressions > 0 ? Number(((totalClicks / totalImpressions) * 100).toFixed(2)) : 0;
-  const avgCpa = totalConversions > 0 ? Number((totalSpend / totalConversions).toFixed(2)) : 0;
-
-  const channelDistribution = [
-    { name: "Google Ads", spend: 18450, revenue: 95400, roas: 5.17, conversions: 497, color: "#4285F4" },
-    { name: "LinkedIn Ads", spend: 9680, revenue: 59822, roas: 6.18, conversions: 218, color: "#0A66C2" },
-    { name: "Meta Ads", spend: 8420, revenue: 35785, roas: 4.25, conversions: 265, color: "#E1306C" },
-    { name: "YouTube Ads", spend: 5620, revenue: 21580, roas: 3.84, conversions: 142, color: "#FF0000" },
-  ];
-
-  const monthlyTrends = [
-    { month: "Apr 2026", spend: 28000, revenue: 118000, roas: 4.21, leads: 620 },
-    { month: "May 2026", spend: 32500, revenue: 146000, roas: 4.49, leads: 740 },
-    { month: "Jun 2026", spend: 36000, revenue: 168000, roas: 4.66, leads: 860 },
-    { month: "Jul 2026", spend: 39500, revenue: 189000, roas: 4.78, leads: 990 },
-    { month: "Aug 2026", spend: 42170, revenue: 206450, roas: 4.89, leads: 1122 },
-    { month: "Sep (Proj)", spend: 45000, revenue: 228000, roas: 5.06, leads: 1250 },
-  ];
-
-  const aiInsights = [
-    {
-      id: "ai-1",
-      type: "SCALE_OPPORTUNITY",
-      title: "Scale Google Search ERP Acquisition",
-      description: "Search Intent ROAS hit 5.42x with a 4.89% CTR. Increasing daily spend by $250 is projected to yield 48 additional qualified enterprise MQLs.",
-      impact: "+$24,000 Pipeline Value",
-      priority: "HIGH",
-    },
-    {
-      id: "ai-2",
-      type: "CREATIVE_REFRESH",
-      title: "Ad Fatigue Detected on Meta Video Ad #2",
-      description: "Frequency reached 4.6 with a 1.2% dip in CTR over the last 4 days. Recommend cycling in the newly approved Carousel format.",
-      impact: "-14% CPA Reduction",
-      priority: "MEDIUM",
-    },
-    {
-      id: "ai-3",
-      type: "AUDIENCE_INSIGHT",
-      title: "LinkedIn InMail High-Intent Conversion Surge",
-      description: "Founders and CTOs in Manufacturing show a 9.30% landing page conversion rate—2.8x higher than industry average.",
-      impact: "6.18x Peak ROAS",
-      priority: "POSITIVE",
-    },
-  ];
-
-  return {
-    totalSpend,
-    totalBudget,
-    attributedRevenue: Math.round(attributedRevenue),
-    blendedRoas,
-    totalClicks,
-    totalImpressions,
-    avgCtr,
-    avgCpa,
-    totalConversions,
-    activeCampaignCount: store.campaigns.filter((c) => c.status === "ACTIVE").length,
-    channelDistribution,
-    monthlyTrends,
-    aiInsights,
-  };
-}
-
-export async function listMarketingCampaigns(filter?: { platform?: string; status?: string; search?: string }) {
-  let list = [...store.campaigns];
-  if (filter?.platform && filter.platform !== "ALL") {
-    list = list.filter((c) => c.platform.toLowerCase() === filter.platform!.toLowerCase());
-  }
-  if (filter?.status && filter.status !== "ALL") {
-    list = list.filter((c) => c.status === filter.status);
-  }
-  if (filter?.search) {
-    const query = filter.search.toLowerCase();
-    list = list.filter((c) => c.name.toLowerCase().includes(query) || c.channel.toLowerCase().includes(query));
-  }
-  return list.sort((a, b) => b.created_at.localeCompare(a.created_at));
-}
-
-export async function createMarketingCampaign(data: {
-  name: string;
-  platform: string;
-  channel: string;
-  objective: string;
-  budget: number;
-  targetAudience?: string;
-  startDate?: string;
-  endDate?: string;
-}) {
-  const newCamp: MarketingCampaign = {
-    id: `mkt-camp-${randomUUID().slice(0, 8)}`,
-    name: data.name,
-    platform: data.platform,
-    channel: data.channel,
-    objective: data.objective,
-    status: "ACTIVE",
-    budget: Number(data.budget),
-    spend: 0,
-    impressions: 0,
-    clicks: 0,
-    conversions: 0,
-    roas: 0,
-    target_audience: data.targetAudience ?? null,
-    start_date: data.startDate ?? new Date().toISOString().split("T")[0],
-    end_date: data.endDate ?? null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-  store.campaigns.unshift(newCamp);
-  return newCamp;
-}
-
-export async function toggleMarketingCampaignStatus(id: string) {
-  const campaign = store.campaigns.find((c) => c.id === id);
-  if (!campaign) throw new Error("Campaign not found");
-  campaign.status = campaign.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
-  campaign.updated_at = new Date().toISOString();
-  return campaign;
-}
-
-export async function deleteMarketingCampaign(id: string) {
-  const index = store.campaigns.findIndex((c) => c.id === id);
-  if (index === -1) throw new Error("Campaign not found");
-  store.campaigns.splice(index, 1);
-  return true;
-}
-
-export async function listMarketingCreatives() {
-  return [...store.creatives].sort((a, b) => b.ctr - a.ctr);
-}
-
-export async function createMarketingCreative(data: {
-  campaignId?: string;
-  title: string;
-  format: "Video" | "Carousel" | "Single Image" | "Story";
-  headline: string;
-  primaryText: string;
-  cta: string;
-}) {
-  const newCr: MarketingCreative = {
-    id: `mkt-cr-${randomUUID().slice(0, 8)}`,
-    campaign_id: data.campaignId ?? null,
-    title: data.title,
-    format: data.format,
-    headline: data.headline,
-    primary_text: data.primaryText,
-    cta: data.cta,
-    ctr: Number((Math.random() * 2 + 3.5).toFixed(2)),
-    conversion_rate: Number((Math.random() * 3 + 5.5).toFixed(2)),
-    preview_badge: "New Creative",
-    status: "ACTIVE",
-    created_at: new Date().toISOString(),
-  };
-  store.creatives.unshift(newCr);
-  return newCr;
-}
-
-export async function listMarketingLeads() {
-  return [...store.leads].sort((a, b) => b.created_at.localeCompare(a.created_at));
-}
-
-export async function markMarketingLeadSynced(id: string) {
-  const lead = store.leads.find((l) => l.id === id);
-  if (!lead) throw new Error("Marketing lead not found");
-  lead.synced_to_crm = true;
-  lead.status = "SYNCED";
-  return lead;
-}
-
-export async function updateMarketingCampaign(id: string, updates: Partial<MarketingCampaign>) {
-  const campaign = store.campaigns.find((c) => c.id === id);
-  if (!campaign) throw new Error("Campaign not found");
-  if (updates.name !== undefined) campaign.name = updates.name;
-  if (updates.budget !== undefined) campaign.budget = Number(updates.budget);
-  if (updates.status !== undefined) campaign.status = updates.status;
-  if (updates.platform !== undefined) campaign.platform = updates.platform;
-  if (updates.channel !== undefined) campaign.channel = updates.channel;
-  if (updates.objective !== undefined) campaign.objective = updates.objective;
-  if (updates.target_audience !== undefined) campaign.target_audience = updates.target_audience;
-  campaign.updated_at = new Date().toISOString();
-  return campaign;
-}
-
-export async function deleteMarketingCreative(id: string) {
-  const index = store.creatives.findIndex((c) => c.id === id);
-  if (index === -1) throw new Error("Creative not found");
-  store.creatives.splice(index, 1);
-  return true;
-}
-
-export async function getUnsyncedMarketingLeads() {
-  return store.leads.filter((l) => !l.synced_to_crm);
-}
-
-// ==========================================
-// CLIENT MANAGEMENT ENGINE
-// ==========================================
-
-export type MarketingClient = {
-  id: string;
-  name: string;
-  industry: string;
-  contact_name: string;
-  contact_email: string;
-  monthly_retainer: number;
-  status: "ACTIVE" | "ONBOARDING" | "PAUSED";
-  website?: string;
-  created_at: string;
-};
-
-export type MarketingClientProject = {
-  id: string;
-  client_id: string;
-  client_name: string;
-  title: string;
-  category: "Paid Search" | "Paid Social" | "SEO & Content" | "Brand & Creative" | "Email & CRM";
-  budget: number;
-  spend: number;
-  target_roas: number;
-  current_roas: number;
-  status: "PLANNING" | "IN_PROGRESS" | "IN_REVIEW" | "ACTIVE" | "COMPLETED";
-  deadline: string;
-  deliverables: string;
-  created_at: string;
-};
-
-export type MarketingClientAsset = {
-  id: string;
-  client_id: string;
-  client_name: string;
-  project_id?: string | null;
-  project_title?: string | null;
-  name: string;
-  asset_type: "Ad Creative" | "Video Script" | "Copywriting" | "Brand Asset" | "Landing Page" | "Report";
-  file_format: "Figma" | "Video / MP4" | "Graphic / PNG" | "PDF" | "Drive / Doc";
-  asset_url: string;
-  status: "APPROVED" | "IN_REVIEW" | "NEEDS_REVISION" | "DRAFT";
-  version: string;
-  notes?: string;
-  created_at: string;
-};
-
 const initialClients: MarketingClient[] = [
   {
     id: "client-001",
@@ -713,58 +502,337 @@ const initialAssets: MarketingClientAsset[] = [
   },
 ];
 
-const clientStore = {
+const runtimeDir = path.join(process.cwd(), ".runtime");
+const storePath = path.join(runtimeDir, "marketing-fallback.json");
+
+const emptyStore = (): FallbackMarketingStore => ({
+  campaigns: [...initialCampaigns],
+  creatives: [...initialCreatives],
+  leads: [...initialLeads],
   clients: [...initialClients],
   projects: [...initialProjects],
   assets: [...initialAssets],
-};
+});
+
+let memoryCache: FallbackMarketingStore | null = null;
+
+async function readStore(): Promise<FallbackMarketingStore> {
+  try {
+    const raw = await readFile(storePath, "utf8");
+    const data = JSON.parse(raw) as Partial<FallbackMarketingStore>;
+    const loaded: FallbackMarketingStore = {
+      campaigns: Array.isArray(data.campaigns) ? data.campaigns : [...initialCampaigns],
+      creatives: Array.isArray(data.creatives) ? data.creatives : [...initialCreatives],
+      leads: Array.isArray(data.leads) ? data.leads : [...initialLeads],
+      clients: Array.isArray(data.clients) ? data.clients : [...initialClients],
+      projects: Array.isArray(data.projects) ? data.projects : [...initialProjects],
+      assets: Array.isArray(data.assets) ? data.assets : [...initialAssets],
+    };
+    memoryCache = loaded;
+    return loaded;
+  } catch {
+    if (memoryCache) return memoryCache;
+    const initial = emptyStore();
+    try {
+      await saveStore(initial);
+    } catch {}
+    memoryCache = initial;
+    return initial;
+  }
+}
+
+async function saveStore(store: FallbackMarketingStore): Promise<void> {
+  memoryCache = store;
+  await mkdir(runtimeDir, { recursive: true });
+  const temporary = `${storePath}.tmp`;
+  await writeFile(temporary, JSON.stringify(store, null, 2), "utf8");
+  await rename(temporary, storePath);
+}
+
+export async function getMarketingOverview() {
+  const store = await readStore();
+  const totalSpend = store.campaigns.reduce((sum, c) => sum + Number(c.spend), 0);
+  const totalBudget = store.campaigns.reduce((sum, c) => sum + Number(c.budget), 0);
+  const totalClicks = store.campaigns.reduce((sum, c) => sum + Number(c.clicks), 0);
+  const totalImpressions = store.campaigns.reduce((sum, c) => sum + Number(c.impressions), 0);
+  const totalConversions = store.campaigns.reduce((sum, c) => sum + Number(c.conversions), 0);
+
+  // Attributed revenue calculation based on campaign ROAS * spend
+  const attributedRevenue = store.campaigns.reduce(
+    (sum, c) => sum + Number(c.spend) * Number(c.roas),
+    0
+  );
+  const blendedRoas = totalSpend > 0 ? Number((attributedRevenue / totalSpend).toFixed(2)) : 0;
+  const avgCtr = totalImpressions > 0 ? Number(((totalClicks / totalImpressions) * 100).toFixed(2)) : 0;
+  const avgCpa = totalConversions > 0 ? Number((totalSpend / totalConversions).toFixed(2)) : 0;
+
+  const channelDistribution = [
+    { name: "Google Ads", spend: 18450, revenue: 95400, roas: 5.17, conversions: 497, color: "#4285F4" },
+    { name: "LinkedIn Ads", spend: 9680, revenue: 59822, roas: 6.18, conversions: 218, color: "#0A66C2" },
+    { name: "Meta Ads", spend: 8420, revenue: 35785, roas: 4.25, conversions: 265, color: "#E1306C" },
+    { name: "YouTube Ads", spend: 5620, revenue: 21580, roas: 3.84, conversions: 142, color: "#FF0000" },
+  ];
+
+  const monthlyTrends = [
+    { month: "Apr 2026", spend: 28000, revenue: 118000, roas: 4.21, leads: 620 },
+    { month: "May 2026", spend: 32500, revenue: 146000, roas: 4.49, leads: 740 },
+    { month: "Jun 2026", spend: 36000, revenue: 168000, roas: 4.66, leads: 860 },
+    { month: "Jul 2026", spend: 39500, revenue: 189000, roas: 4.78, leads: 990 },
+    { month: "Aug 2026", spend: 42170, revenue: 206450, roas: 4.89, leads: 1122 },
+    { month: "Sep (Proj)", spend: 45000, revenue: 228000, roas: 5.06, leads: 1250 },
+  ];
+
+  const aiInsights = [
+    {
+      id: "ai-1",
+      type: "SCALE_OPPORTUNITY",
+      title: "Scale Google Search ERP Acquisition",
+      description: "Search Intent ROAS hit 5.42x with a 4.89% CTR. Increasing daily spend by $250 is projected to yield 48 additional qualified enterprise MQLs.",
+      impact: "+$24,000 Pipeline Value",
+      priority: "HIGH",
+    },
+    {
+      id: "ai-2",
+      type: "CREATIVE_REFRESH",
+      title: "Ad Fatigue Detected on Meta Video Ad #2",
+      description: "Frequency reached 4.6 with a 1.2% dip in CTR over the last 4 days. Recommend cycling in the newly approved Carousel format.",
+      impact: "-14% CPA Reduction",
+      priority: "MEDIUM",
+    },
+    {
+      id: "ai-3",
+      type: "AUDIENCE_INSIGHT",
+      title: "LinkedIn InMail High-Intent Conversion Surge",
+      description: "Founders and CTOs in Manufacturing show a 9.30% landing page conversion rate—2.8x higher than industry average.",
+      impact: "6.18x Peak ROAS",
+      priority: "POSITIVE",
+    },
+  ];
+
+  return {
+    totalSpend,
+    totalBudget,
+    attributedRevenue: Math.round(attributedRevenue),
+    blendedRoas,
+    totalClicks,
+    totalImpressions,
+    avgCtr,
+    avgCpa,
+    totalConversions,
+    activeCampaignCount: store.campaigns.filter((c) => c.status === "ACTIVE").length,
+    channelDistribution,
+    monthlyTrends,
+    aiInsights,
+  };
+}
+
+export async function listMarketingCampaigns(filter?: { platform?: string; status?: string; search?: string }) {
+  const store = await readStore();
+  let list = [...store.campaigns];
+  if (filter?.platform && filter.platform !== "ALL") {
+    list = list.filter((c) => c.platform.toLowerCase() === filter.platform!.toLowerCase());
+  }
+  if (filter?.status && filter.status !== "ALL") {
+    list = list.filter((c) => c.status === filter.status);
+  }
+  if (filter?.search) {
+    const query = filter.search.toLowerCase();
+    list = list.filter((c) => c.name.toLowerCase().includes(query) || c.channel.toLowerCase().includes(query));
+  }
+  return list.sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function createMarketingCampaign(data: {
+  name: string;
+  platform: string;
+  channel: string;
+  objective: string;
+  budget: number;
+  targetAudience?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  const store = await readStore();
+  const newCamp: MarketingCampaign = {
+    id: `mkt-camp-${randomUUID().slice(0, 8)}`,
+    name: data.name,
+    platform: data.platform,
+    channel: data.channel,
+    objective: data.objective,
+    status: "ACTIVE",
+    budget: Number(data.budget),
+    spend: 0,
+    impressions: 0,
+    clicks: 0,
+    conversions: 0,
+    roas: 0,
+    target_audience: data.targetAudience ?? null,
+    start_date: data.startDate ?? new Date().toISOString().split("T")[0],
+    end_date: data.endDate ?? null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  store.campaigns.unshift(newCamp);
+  await saveStore(store);
+  return newCamp;
+}
+
+export async function toggleMarketingCampaignStatus(id: string) {
+  const store = await readStore();
+  const campaign = store.campaigns.find((c) => c.id === id);
+  if (!campaign) throw new Error("Campaign not found");
+  campaign.status = campaign.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
+  campaign.updated_at = new Date().toISOString();
+  await saveStore(store);
+  return campaign;
+}
+
+export async function deleteMarketingCampaign(id: string) {
+  const store = await readStore();
+  const index = store.campaigns.findIndex((c) => c.id === id);
+  if (index === -1) throw new Error("Campaign not found");
+  store.campaigns.splice(index, 1);
+  await saveStore(store);
+  return true;
+}
+
+export async function listMarketingCreatives() {
+  const store = await readStore();
+  return [...store.creatives].sort((a, b) => b.ctr - a.ctr);
+}
+
+export async function createMarketingCreative(data: {
+  campaignId?: string;
+  title: string;
+  format: "Video" | "Carousel" | "Single Image" | "Story";
+  headline: string;
+  primaryText: string;
+  cta: string;
+}) {
+  const store = await readStore();
+  const newCr: MarketingCreative = {
+    id: `mkt-cr-${randomUUID().slice(0, 8)}`,
+    campaign_id: data.campaignId ?? null,
+    title: data.title,
+    format: data.format,
+    headline: data.headline,
+    primary_text: data.primaryText,
+    cta: data.cta,
+    ctr: Number((Math.random() * 2 + 3.5).toFixed(2)),
+    conversion_rate: Number((Math.random() * 3 + 5.5).toFixed(2)),
+    preview_badge: "New Creative",
+    status: "ACTIVE",
+    created_at: new Date().toISOString(),
+  };
+  store.creatives.unshift(newCr);
+  await saveStore(store);
+  return newCr;
+}
+
+export async function listMarketingLeads() {
+  const store = await readStore();
+  return [...store.leads].sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function markMarketingLeadSynced(id: string) {
+  const store = await readStore();
+  const lead = store.leads.find((l) => l.id === id);
+  if (!lead) throw new Error("Marketing lead not found");
+  lead.synced_to_crm = true;
+  lead.status = "SYNCED";
+  await saveStore(store);
+  return lead;
+}
+
+export async function updateMarketingCampaign(id: string, updates: Partial<MarketingCampaign>) {
+  const store = await readStore();
+  const campaign = store.campaigns.find((c) => c.id === id);
+  if (!campaign) throw new Error("Campaign not found");
+  if (updates.name !== undefined) campaign.name = updates.name;
+  if (updates.budget !== undefined) campaign.budget = Number(updates.budget);
+  if (updates.status !== undefined) campaign.status = updates.status;
+  if (updates.platform !== undefined) campaign.platform = updates.platform;
+  if (updates.channel !== undefined) campaign.channel = updates.channel;
+  if (updates.objective !== undefined) campaign.objective = updates.objective;
+  if (updates.target_audience !== undefined) campaign.target_audience = updates.target_audience;
+  campaign.updated_at = new Date().toISOString();
+  await saveStore(store);
+  return campaign;
+}
+
+export async function deleteMarketingCreative(id: string) {
+  const store = await readStore();
+  const index = store.creatives.findIndex((c) => c.id === id);
+  if (index === -1) throw new Error("Creative not found");
+  store.creatives.splice(index, 1);
+  await saveStore(store);
+  return true;
+}
+
+export async function getUnsyncedMarketingLeads() {
+  const store = await readStore();
+  return store.leads.filter((l) => !l.synced_to_crm);
+}
+
+// ==========================================
+// CLIENT MANAGEMENT ENGINE
+// ==========================================
 
 // Client CRUD
 export async function listMarketingClients() {
-  return [...clientStore.clients].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const store = await readStore();
+  return [...store.clients].sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
 
 export async function getMarketingClient(id: string) {
-  const client = clientStore.clients.find((c) => c.id === id);
+  const store = await readStore();
+  const client = store.clients.find((c) => c.id === id);
   if (!client) throw new Error("Client not found");
   return client;
 }
 
 export async function addMarketingClient(input: Omit<MarketingClient, "id" | "created_at">) {
+  const store = await readStore();
   const newClient: MarketingClient = {
     ...input,
     id: `client-${randomUUID().slice(0, 8)}`,
     created_at: new Date().toISOString(),
   };
-  clientStore.clients.unshift(newClient);
+  store.clients.unshift(newClient);
+  await saveStore(store);
   return newClient;
 }
 
 export async function updateMarketingClient(id: string, updates: Partial<MarketingClient>) {
-  const client = clientStore.clients.find((c) => c.id === id);
+  const store = await readStore();
+  const client = store.clients.find((c) => c.id === id);
   if (!client) throw new Error("Client not found");
   Object.assign(client, updates);
   // Update denormalized client_name in projects and assets
   if (updates.name) {
-    clientStore.projects.filter((p) => p.client_id === id).forEach((p) => (p.client_name = updates.name!));
-    clientStore.assets.filter((a) => a.client_id === id).forEach((a) => (a.client_name = updates.name!));
+    store.projects.filter((p) => p.client_id === id).forEach((p) => (p.client_name = updates.name!));
+    store.assets.filter((a) => a.client_id === id).forEach((a) => (a.client_name = updates.name!));
   }
+  await saveStore(store);
   return client;
 }
 
 export async function deleteMarketingClient(id: string) {
-  const idx = clientStore.clients.findIndex((c) => c.id === id);
+  const store = await readStore();
+  const idx = store.clients.findIndex((c) => c.id === id);
   if (idx === -1) throw new Error("Client not found");
-  clientStore.clients.splice(idx, 1);
+  store.clients.splice(idx, 1);
   // Cascade delete projects & assets
-  clientStore.projects = clientStore.projects.filter((p) => p.client_id !== id);
-  clientStore.assets = clientStore.assets.filter((a) => a.client_id !== id);
+  store.projects = store.projects.filter((p) => p.client_id !== id);
+  store.assets = store.assets.filter((a) => a.client_id !== id);
+  await saveStore(store);
   return true;
 }
 
 // Project CRUD
 export async function listMarketingClientProjects(clientId?: string) {
-  let list = [...clientStore.projects];
+  const store = await readStore();
+  let list = [...store.projects];
   if (clientId) {
     list = list.filter((p) => p.client_id === clientId);
   }
@@ -780,7 +848,8 @@ export async function addMarketingClientProject(input: {
   deadline: string;
   deliverables?: string;
 }) {
-  const client = clientStore.clients.find((c) => c.id === input.client_id);
+  const store = await readStore();
+  const client = store.clients.find((c) => c.id === input.client_id);
   const clientName = client ? client.name : "Client Project";
   const newProj: MarketingClientProject = {
     id: `proj-${randomUUID().slice(0, 8)}`,
@@ -797,30 +866,36 @@ export async function addMarketingClientProject(input: {
     deliverables: input.deliverables || "Standard campaign deliverables",
     created_at: new Date().toISOString(),
   };
-  clientStore.projects.unshift(newProj);
+  store.projects.unshift(newProj);
+  await saveStore(store);
   return newProj;
 }
 
 export async function updateMarketingClientProject(id: string, updates: Partial<MarketingClientProject>) {
-  const proj = clientStore.projects.find((p) => p.id === id);
+  const store = await readStore();
+  const proj = store.projects.find((p) => p.id === id);
   if (!proj) throw new Error("Project not found");
   Object.assign(proj, updates);
   if (updates.title) {
-    clientStore.assets.filter((a) => a.project_id === id).forEach((a) => (a.project_title = updates.title!));
+    store.assets.filter((a) => a.project_id === id).forEach((a) => (a.project_title = updates.title!));
   }
+  await saveStore(store);
   return proj;
 }
 
 export async function deleteMarketingClientProject(id: string) {
-  const idx = clientStore.projects.findIndex((p) => p.id === id);
+  const store = await readStore();
+  const idx = store.projects.findIndex((p) => p.id === id);
   if (idx === -1) throw new Error("Project not found");
-  clientStore.projects.splice(idx, 1);
+  store.projects.splice(idx, 1);
+  await saveStore(store);
   return true;
 }
 
 // Asset CRUD
 export async function listMarketingClientAssets(clientId?: string, projectId?: string) {
-  let list = [...clientStore.assets];
+  const store = await readStore();
+  let list = [...store.assets];
   if (clientId) list = list.filter((a) => a.client_id === clientId);
   if (projectId) list = list.filter((a) => a.project_id === projectId);
   return list.sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -837,9 +912,10 @@ export async function addMarketingClientAsset(input: {
   version?: string;
   notes?: string;
 }) {
-  const client = clientStore.clients.find((c) => c.id === input.client_id);
+  const store = await readStore();
+  const client = store.clients.find((c) => c.id === input.client_id);
   const clientName = client ? client.name : "Client Asset";
-  const project = input.project_id ? clientStore.projects.find((p) => p.id === input.project_id) : null;
+  const project = input.project_id ? store.projects.find((p) => p.id === input.project_id) : null;
   const newAsset: MarketingClientAsset = {
     id: `asset-${randomUUID().slice(0, 8)}`,
     client_id: input.client_id,
@@ -855,36 +931,42 @@ export async function addMarketingClientAsset(input: {
     notes: input.notes || "",
     created_at: new Date().toISOString(),
   };
-  clientStore.assets.unshift(newAsset);
+  store.assets.unshift(newAsset);
+  await saveStore(store);
   return newAsset;
 }
 
 export async function updateMarketingClientAsset(id: string, updates: Partial<MarketingClientAsset>) {
-  const asset = clientStore.assets.find((a) => a.id === id);
+  const store = await readStore();
+  const asset = store.assets.find((a) => a.id === id);
   if (!asset) throw new Error("Asset not found");
   Object.assign(asset, updates);
+  await saveStore(store);
   return asset;
 }
 
 export async function deleteMarketingClientAsset(id: string) {
-  const idx = clientStore.assets.findIndex((a) => a.id === id);
+  const store = await readStore();
+  const idx = store.assets.findIndex((a) => a.id === id);
   if (idx === -1) throw new Error("Asset not found");
-  clientStore.assets.splice(idx, 1);
+  store.assets.splice(idx, 1);
+  await saveStore(store);
   return true;
 }
 
 // Aggregates for Client Management Workspace
 export async function getMarketingClientsOverview() {
-  const totalClients = clientStore.clients.length;
-  const activeClients = clientStore.clients.filter((c) => c.status === "ACTIVE").length;
-  const totalMonthlyRetainer = clientStore.clients.reduce((acc, c) => acc + c.monthly_retainer, 0);
-  const totalProjects = clientStore.projects.length;
-  const activeProjects = clientStore.projects.filter((p) => p.status === "ACTIVE" || p.status === "IN_PROGRESS").length;
-  const totalBudgetManaged = clientStore.projects.reduce((acc, p) => acc + p.budget, 0);
-  const totalSpend = clientStore.projects.reduce((acc, p) => acc + p.spend, 0);
-  const totalAssets = clientStore.assets.length;
-  const assetsInReview = clientStore.assets.filter((a) => a.status === "IN_REVIEW").length;
-  const assetsApproved = clientStore.assets.filter((a) => a.status === "APPROVED").length;
+  const store = await readStore();
+  const totalClients = store.clients.length;
+  const activeClients = store.clients.filter((c) => c.status === "ACTIVE").length;
+  const totalMonthlyRetainer = store.clients.reduce((acc, c) => acc + c.monthly_retainer, 0);
+  const totalProjects = store.projects.length;
+  const activeProjects = store.projects.filter((p) => p.status === "ACTIVE" || p.status === "IN_PROGRESS").length;
+  const totalBudgetManaged = store.projects.reduce((acc, p) => acc + p.budget, 0);
+  const totalSpend = store.projects.reduce((acc, p) => acc + p.spend, 0);
+  const totalAssets = store.assets.length;
+  const assetsInReview = store.assets.filter((a) => a.status === "IN_REVIEW").length;
+  const assetsApproved = store.assets.filter((a) => a.status === "APPROVED").length;
 
   return {
     totalClients,
@@ -897,13 +979,11 @@ export async function getMarketingClientsOverview() {
     totalAssets,
     assetsInReview,
     assetsApproved,
-    clientPortfolio: clientStore.clients.map((c) => ({
+    clientPortfolio: store.clients.map((c) => ({
       name: c.name,
       retainer: c.monthly_retainer,
-      projectCount: clientStore.projects.filter((p) => p.client_id === c.id).length,
-      assetCount: clientStore.assets.filter((a) => a.client_id === c.id).length,
+      projectCount: store.projects.filter((p) => p.client_id === c.id).length,
+      assetCount: store.assets.filter((a) => a.client_id === c.id).length,
     })),
   };
 }
-
-

@@ -17,6 +17,8 @@ import { apiFetch } from "../lib/api";
 
 interface DigitalMarketingWorkspaceProps {
   admin?: boolean;
+  readOnly?: boolean;
+  embedded?: boolean;
   onLogout?: () => void;
   onBack?: () => void;
   dark?: boolean;
@@ -88,6 +90,8 @@ type OverviewStats = {
 
 export default function DigitalMarketingWorkspace({
   admin = false,
+  readOnly = false,
+  embedded = false,
   onLogout,
   onBack,
   dark: propDark = false,
@@ -559,7 +563,7 @@ export default function DigitalMarketingWorkspace({
   const pillOutline = dark ? "bg-[#161b22] border-[#30363d] text-[#c9d1d9] hover:bg-[#21262d]" : "bg-white/80 border-[#ded8ce] text-[#222222] hover:bg-white";
 
   return (
-    <div className={`h-screen w-full overflow-y-auto transition-colors duration-200 ${pageBg}`}>
+    <div className={`${embedded ? "w-full min-h-full pb-16" : "h-screen w-full overflow-y-auto"} transition-colors duration-200 ${pageBg}`}>
       {/* Toast Notice */}
       <AnimatePresence>
         {notice && (
@@ -581,7 +585,7 @@ export default function DigitalMarketingWorkspace({
       <header className={`sticky top-0 z-40 w-full border-b ${dark ? "border-[#21262d] bg-[#0d1117]/85" : "border-[#ede7dc] bg-[#fbf8f3]/85"} backdrop-blur-md px-4 sm:px-8 py-3.5`}>
         <div className="w-full flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            {admin && onBack && (
+            {admin && onBack && !embedded && (
               <button
                 type="button"
                 onClick={onBack}
@@ -595,8 +599,12 @@ export default function DigitalMarketingWorkspace({
               <div className="h-6 w-6 rounded-md bg-[#111111] text-white flex items-center justify-center font-bold text-xs font-serif">
                 Z
               </div>
-              <span className="font-semibold tracking-tight text-sm">ZootechX ERP</span>
-              <span className={`text-[11px] font-mono ${textMuted}`}>/ client marketing management</span>
+              <span className="font-semibold tracking-tight text-sm">Marketing Workspace</span>
+              {readOnly && (
+                <span className="rounded-full bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 text-[10px] font-bold text-indigo-400">
+                  Shared Live View
+                </span>
+              )}
             </div>
           </div>
 
@@ -625,39 +633,45 @@ export default function DigitalMarketingWorkspace({
 
           {/* Top Actions */}
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowAddClientModal(true)}
-              className={`hidden sm:flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition shadow-sm ${pillBlack}`}
-            >
-              <span>+ Client</span>
-              <ArrowUpRight size={13} />
-            </button>
+            {!readOnly && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowAddClientModal(true)}
+                  className={`hidden sm:flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition shadow-sm ${pillBlack}`}
+                >
+                  <span>+ Client</span>
+                  <ArrowUpRight size={13} />
+                </button>
 
-            <button
-              type="button"
-              onClick={() => setShowAddProjectModal(true)}
-              className={`hidden lg:flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition border ${pillOutline}`}
-            >
-              <span>+ Project</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddProjectModal(true)}
+                  className={`hidden lg:flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition border ${pillOutline}`}
+                >
+                  <span>+ Project</span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => setShowAddAssetModal(true)}
-              className={`hidden lg:flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition border ${pillOutline}`}
-            >
-              <span>+ Asset</span>
-            </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddAssetModal(true)}
+                  className={`hidden lg:flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition border ${pillOutline}`}
+                >
+                  <span>+ Asset</span>
+                </button>
+              </>
+            )}
 
-            <button
-              type="button"
-              onClick={handleToggleTheme}
-              className={`flex h-8 w-8 items-center justify-center rounded-full border ${pillOutline} transition`}
-              title="Toggle Theme"
-            >
-              {dark ? <Sun size={13} /> : <Moon size={13} />}
-            </button>
+            {!embedded && (
+              <button
+                type="button"
+                onClick={handleToggleTheme}
+                className={`flex h-8 w-8 items-center justify-center rounded-full border ${pillOutline} transition`}
+                title="Toggle Theme"
+              >
+                {dark ? <Sun size={13} /> : <Moon size={13} />}
+              </button>
+            )}
 
             <button
               type="button"
@@ -669,7 +683,7 @@ export default function DigitalMarketingWorkspace({
               <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
             </button>
 
-            {onLogout && (
+            {!embedded && onLogout && (
               <button
                 type="button"
                 onClick={onLogout}
@@ -719,34 +733,43 @@ export default function DigitalMarketingWorkspace({
             </p>
 
             {/* Action Pills */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAddClientModal(true)}
-                className={`flex items-center gap-2 rounded-full px-6 py-3 text-xs sm:text-sm font-medium transition shadow-sm ${pillBlack}`}
-              >
-                <span>+ Onboard Client</span>
-                <ArrowUpRight size={15} />
-              </button>
+            {!readOnly ? (
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddClientModal(true)}
+                  className={`flex items-center gap-2 rounded-full px-6 py-3 text-xs sm:text-sm font-medium transition shadow-sm ${pillBlack}`}
+                >
+                  <span>+ Onboard Client</span>
+                  <ArrowUpRight size={15} />
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setShowAddProjectModal(true)}
-                className={`flex items-center gap-2 rounded-full px-5 py-3 text-xs sm:text-sm font-medium transition ${pillOutline}`}
-              >
-                <FolderPlus size={15} />
-                <span>+ Client Project</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddProjectModal(true)}
+                  className={`flex items-center gap-2 rounded-full px-5 py-3 text-xs sm:text-sm font-medium transition ${pillOutline}`}
+                >
+                  <FolderPlus size={15} />
+                  <span>+ Client Project</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setShowAddAssetModal(true)}
-                className={`flex items-center gap-2 rounded-full px-5 py-3 text-xs sm:text-sm font-medium transition ${pillOutline}`}
-              >
-                <FileText size={15} />
-                <span>+ Client Asset</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddAssetModal(true)}
+                  className={`flex items-center gap-2 rounded-full px-5 py-3 text-xs sm:text-sm font-medium transition ${pillOutline}`}
+                >
+                  <FileText size={15} />
+                  <span>+ Client Asset</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 border text-xs font-semibold bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+                  <ShieldCheck size={14} />
+                  <span>Read-Only Visibility • Synchronized with Marketing Team</span>
+                </div>
+              </div>
+            )}
 
             {/* Floating Capsule Badge */}
             <div className="pt-4">
@@ -976,14 +999,16 @@ export default function DigitalMarketingWorkspace({
                   <span>Export Clients</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setShowAddClientModal(true)}
-                  className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-medium ${pillBlack}`}
-                >
-                  <span>+ Onboard New Client</span>
-                  <ArrowUpRight size={14} />
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddClientModal(true)}
+                    className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-medium ${pillBlack}`}
+                  >
+                    <span>+ Onboard New Client</span>
+                    <ArrowUpRight size={14} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1070,24 +1095,26 @@ export default function DigitalMarketingWorkspace({
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setEditingClient(client)}
-                          className={`rounded-full p-1.5 border ${pillOutline}`}
-                          title="Edit Client"
-                        >
-                          <Edit3 size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteClient(client.id)}
-                          className="text-stone-400 hover:text-red-500 transition p-1.5"
-                          title="Delete Client"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                      {!readOnly && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setEditingClient(client)}
+                            className={`rounded-full p-1.5 border ${pillOutline}`}
+                            title="Edit Client"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteClient(client.id)}
+                            className="text-stone-400 hover:text-red-500 transition p-1.5"
+                            title="Delete Client"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -1117,14 +1144,16 @@ export default function DigitalMarketingWorkspace({
                   <span>Export Projects</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setShowAddProjectModal(true)}
-                  className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-medium ${pillBlack}`}
-                >
-                  <span>+ Create Client Project</span>
-                  <ArrowUpRight size={14} />
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddProjectModal(true)}
+                    className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-medium ${pillBlack}`}
+                  >
+                    <span>+ Create Client Project</span>
+                    <ArrowUpRight size={14} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1218,29 +1247,39 @@ export default function DigitalMarketingWorkspace({
                         </td>
                         <td className="px-6 py-4 text-stone-500">{proj.deadline}</td>
                         <td className="px-6 py-4">
-                          <select
-                            value={proj.status}
-                            onChange={(e) => handleUpdateProjectStatus(proj.id, e.target.value as any)}
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono border outline-none ${
+                          {!readOnly ? (
+                            <select
+                              value={proj.status}
+                              onChange={(e) => handleUpdateProjectStatus(proj.id, e.target.value as any)}
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono border outline-none ${
+                                proj.status === "ACTIVE" ? pillBlack : pillSand
+                              }`}
+                            >
+                              <option value="PLANNING">PLANNING</option>
+                              <option value="IN_PROGRESS">IN_PROGRESS</option>
+                              <option value="IN_REVIEW">IN_REVIEW</option>
+                              <option value="ACTIVE">ACTIVE</option>
+                              <option value="COMPLETED">COMPLETED</option>
+                            </select>
+                          ) : (
+                            <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-mono border ${
                               proj.status === "ACTIVE" ? pillBlack : pillSand
-                            }`}
-                          >
-                            <option value="PLANNING">PLANNING</option>
-                            <option value="IN_PROGRESS">IN_PROGRESS</option>
-                            <option value="IN_REVIEW">IN_REVIEW</option>
-                            <option value="ACTIVE">ACTIVE</option>
-                            <option value="COMPLETED">COMPLETED</option>
-                          </select>
+                            }`}>
+                              {proj.status}
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteProject(proj.id)}
-                            className="text-stone-400 hover:text-red-500 transition p-1"
-                            title="Delete Project"
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          {!readOnly && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProject(proj.id)}
+                              className="text-stone-400 hover:text-red-500 transition p-1"
+                              title="Delete Project"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1272,14 +1311,16 @@ export default function DigitalMarketingWorkspace({
                   <span>Export Assets</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setShowAddAssetModal(true)}
-                  className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-medium ${pillBlack}`}
-                >
-                  <span>+ Add Client Asset</span>
-                  <ArrowUpRight size={14} />
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddAssetModal(true)}
+                    className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-medium ${pillBlack}`}
+                  >
+                    <span>+ Add Client Asset</span>
+                    <ArrowUpRight size={14} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1369,14 +1410,16 @@ export default function DigitalMarketingWorkspace({
                         <ExternalLink size={12} />
                       </a>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteAsset(asset.id)}
-                        className="text-stone-400 hover:text-red-500 transition p-1"
-                        title="Delete Asset"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAsset(asset.id)}
+                          className="text-stone-400 hover:text-red-500 transition p-1"
+                          title="Delete Asset"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -2058,33 +2101,35 @@ export default function DigitalMarketingWorkspace({
               )}
 
               {/* Status Action Buttons */}
-              <div className="space-y-2 pt-1">
-                <div className="text-[11px] font-mono text-stone-500">Update Review Decision:</div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateAssetStatus(previewingAsset.id, "APPROVED")}
-                    className="flex-1 rounded-full py-2 text-xs font-mono font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition flex items-center justify-center gap-1"
-                  >
-                    <Check size={13} />
-                    <span>Approve Asset</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateAssetStatus(previewingAsset.id, "NEEDS_REVISION")}
-                    className="flex-1 rounded-full py-2 text-xs font-mono font-medium bg-amber-600 text-white hover:bg-amber-700 transition"
-                  >
-                    Request Revision
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateAssetStatus(previewingAsset.id, "IN_REVIEW")}
-                    className={`flex-1 rounded-full py-2 text-xs font-mono font-medium border ${pillOutline}`}
-                  >
-                    In Review
-                  </button>
+              {!readOnly && (
+                <div className="space-y-2 pt-1">
+                  <div className="text-[11px] font-mono text-stone-500">Update Review Decision:</div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateAssetStatus(previewingAsset.id, "APPROVED")}
+                      className="flex-1 rounded-full py-2 text-xs font-mono font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition flex items-center justify-center gap-1"
+                    >
+                      <Check size={13} />
+                      <span>Approve Asset</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateAssetStatus(previewingAsset.id, "NEEDS_REVISION")}
+                      className="flex-1 rounded-full py-2 text-xs font-mono font-medium bg-amber-600 text-white hover:bg-amber-700 transition"
+                    >
+                      Request Revision
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateAssetStatus(previewingAsset.id, "IN_REVIEW")}
+                      className={`flex-1 rounded-full py-2 text-xs font-mono font-medium border ${pillOutline}`}
+                    >
+                      In Review
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex items-center justify-between pt-2 border-t border-inherit">
                 <a

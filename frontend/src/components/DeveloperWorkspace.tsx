@@ -3,10 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Code2, FolderKanban, Users, Plus, KeyRound, RefreshCw,
   Send, Trash2, CalendarDays, ExternalLink, ShieldCheck, CheckCircle2,
-  Clock, AlertCircle, ChevronRight, X, ArrowLeft, ArrowUpRight, LogOut, Sun, Moon
+  Clock, AlertCircle, ChevronRight, X, ArrowLeft, ArrowUpRight, LogOut, Sun, Moon, FileText
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import CredentialsVault from "./CredentialsVault";
+import ScopeOfWorkWorkspace from "./ScopeOfWorkWorkspace";
 
 type Developer = {
   id: string;
@@ -42,6 +43,7 @@ type Update = {
 
 export default function DeveloperWorkspace({
   admin = false,
+  subAdmin = false,
   embedded = false,
   onLogout,
   onBack,
@@ -49,13 +51,14 @@ export default function DeveloperWorkspace({
   onToggleTheme,
 }: {
   admin?: boolean;
+  subAdmin?: boolean;
   embedded?: boolean;
   onLogout?: () => void;
   onBack?: () => void;
   dark?: boolean;
   onToggleTheme?: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"projects" | "daily" | "issues" | "team" | "assign" | "vault">("projects");
+  const [activeTab, setActiveTab] = useState<"projects" | "daily" | "issues" | "team" | "assign" | "vault" | "sows">("projects");
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeDeveloperId, setActiveDeveloperId] = useState<string | null>(null);
@@ -90,8 +93,10 @@ export default function DeveloperWorkspace({
   });
 
   // Developer Issues State
-  const [issuesList, setIssuesList] = useState<Array<{
+  type Issue = {
     id: string;
+    developer_id?: string;
+    developer_name?: string;
     title: string;
     description: string;
     project_name: string;
@@ -99,18 +104,11 @@ export default function DeveloperWorkspace({
     type: "BUG" | "FEATURE" | "IMPROVEMENT";
     status: "OPEN" | "IN_PROGRESS" | "RESOLVED";
     created_at: string;
-  }>>([
-    {
-      id: "iss-01",
-      title: "CORS preflight timeout on heavy invoice queries",
-      description: "Ensure caching header or withDbTimeout prevents request hanging during Neon cold starts.",
-      project_name: "ZootechX CRM Core",
-      priority: "HIGH",
-      type: "BUG",
-      status: "RESOLVED",
-      created_at: new Date(Date.now() - 86400000).toISOString(),
-    },
-  ]);
+    updated_at?: string;
+  };
+
+  const [issuesList, setIssuesList] = useState<Issue[]>([]);
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
   const [issueForm, setIssueForm] = useState<{
     title: string;
     description: string;
@@ -195,10 +193,18 @@ export default function DeveloperWorkspace({
         setDevelopers(developerData.data ?? []);
       }
 
+      if (!subAdmin) {
+        try {
+          const duRes = await apiFetch("/api/daily-updates");
+          const duData = await duRes.json();
+          if (duRes.ok && Array.isArray(duData.data)) setDailyUpdatesList(duData.data);
+        } catch {}
+      }
+
       try {
-        const duRes = await apiFetch("/api/daily-updates");
-        const duData = await duRes.json();
-        if (duRes.ok && Array.isArray(duData.data)) setDailyUpdatesList(duData.data);
+        const issuesRes = await apiFetch("/api/developer-issues");
+        const issuesData = await issuesRes.json();
+        if (issuesRes.ok && Array.isArray(issuesData.data)) setIssuesList(issuesData.data);
       } catch {}
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to reach the project service.");
@@ -206,6 +212,15 @@ export default function DeveloperWorkspace({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if ((subAdmin || !admin) && activeTab === "daily") {
+      setActiveTab("projects");
+    }
+    if (subAdmin && activeTab === "vault") {
+      setActiveTab("projects");
+    }
+  }, [subAdmin, admin, activeTab]);
 
   const submitDailyUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,23 +257,55 @@ export default function DeveloperWorkspace({
     }
   };
 
-  const submitIssue = (e: React.FormEvent) => {
+  const submitIssue = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!issueForm.title.trim()) return;
-    const newIssue = {
-      id: `iss-${Date.now().toString().slice(-4)}`,
-      title: issueForm.title.trim(),
-      description: issueForm.description.trim(),
-      project_name: issueForm.projectName || "ZootechX CRM",
-      priority: issueForm.priority,
-      type: issueForm.type,
-      status: "OPEN" as const,
-      created_at: new Date().toISOString(),
-    };
-    setIssuesList((prev) => [newIssue, ...prev]);
-    setShowIssueModal(false);
-    setIssueForm({ title: "", description: "", projectName: "", priority: "MEDIUM", type: "BUG" });
-    setNotice("Issue logged to tracker.");
+    if (admin || subAdmin) return;
+    if (!issueForm.title.trim()) {
+      setNotice("Please enter an issue title.");
+      return;
+    }
+    setSaving("update");
+    try {
+      const res = await apiFetch("/api/developer-issues", {
+        method: "POST",
+        body: JSON.stringify({
+          title: issueForm.title.trim(),
+          description: issueForm.description.trim() || "No description provided.",
+          projectName: issueForm.projectName.trim() || "General Engineering",
+          priority: issueForm.priority,
+          type: issueForm.type,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to log issue");
+      setIssuesList((prev) => [data.data, ...prev]);
+      setShowIssueModal(false);
+      setIssueForm({ title: "", description: "", projectName: "", priority: "MEDIUM", type: "BUG" });
+      setNotice("Issue logged to tracker successfully.");
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Failed to report issue");
+    } finally {
+      setSaving("");
+    }
+  };
+
+  const resolveIssue = async (issueId: string) => {
+    if (admin || subAdmin) return;
+    try {
+      const res = await apiFetch(`/api/developer-issues/${issueId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "RESOLVED" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Unable to update issue status");
+      setIssuesList((prev) => prev.map((i) => (i.id === issueId ? { ...i, status: "RESOLVED" } : i)));
+      if (selectedIssue?.id === issueId) {
+        setSelectedIssue((prev) => prev ? { ...prev, status: "RESOLVED" } : null);
+      }
+      setNotice("Issue marked as resolved.");
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Unable to update issue status");
+    }
   };
 
   useEffect(() => {
@@ -266,7 +313,7 @@ export default function DeveloperWorkspace({
     if (!admin) return;
     const refreshId = window.setInterval(() => void load(), 12000);
     return () => window.clearInterval(refreshId);
-  }, [admin]);
+  }, [admin, subAdmin]);
 
   const selectProject = async (project: Project) => {
     setSelected(project);
@@ -342,7 +389,7 @@ export default function DeveloperWorkspace({
   };
 
   const addUpdate = async () => {
-    if (!selected) return;
+    if (!selected || admin) return;
     setSaving("update");
     try {
       const response = await apiFetch(`/api/projects/${selected.id}/updates`, {
@@ -389,7 +436,7 @@ export default function DeveloperWorkspace({
   };
 
   const updateProjectStatus = async (status: string) => {
-    if (!selected) return;
+    if (!selected || admin) return;
     setSaving("update");
     try {
       const response = await apiFetch(`/api/projects/${selected.id}/status`, {
@@ -434,7 +481,7 @@ export default function DeveloperWorkspace({
   const mutedText = dark ? "text-[#8e9bb0]" : "text-[#78716c]";
 
   type NavItem = {
-    id: "projects" | "daily" | "issues" | "team" | "assign" | "vault";
+    id: "projects" | "daily" | "issues" | "team" | "assign" | "vault" | "sows";
     label: string;
     icon: React.ComponentType<any>;
     badge?: number;
@@ -442,11 +489,12 @@ export default function DeveloperWorkspace({
 
   const navigationItems: NavItem[] = [
     { id: "projects", label: admin ? "All Projects" : "My Projects", icon: FolderKanban, badge: projects.length },
-    { id: "daily", label: "Daily Updates", icon: CalendarDays, badge: dailyUpdatesList.length },
+    ...(admin && !subAdmin ? [{ id: "daily", label: "Daily Updates", icon: CalendarDays, badge: dailyUpdatesList.length } as NavItem] : []),
+    ...(!admin ? [{ id: "sows", label: "Scope of Work (SOW)", icon: FileText } as NavItem] : []),
     { id: "issues", label: "Issues & Bugs", icon: AlertCircle, badge: issuesList.filter((i) => i.status !== "RESOLVED").length },
     ...(admin ? [{ id: "team", label: "Team Members", icon: Users, badge: developers.length } as NavItem] : []),
     ...(admin ? [{ id: "assign", label: "Assign Project", icon: Plus } as NavItem] : []),
-    { id: "vault", label: "Credentials & API Vault", icon: KeyRound },
+    ...(!subAdmin ? [{ id: "vault", label: "Credentials & API Vault", icon: KeyRound } as NavItem] : []),
   ];
 
   const renderTabContent = () => (
@@ -663,63 +711,100 @@ export default function DeveloperWorkspace({
                         </p>
                       </div>
 
-                      {/* STATUS TOGGLE */}
-                      <div className="mt-5 rounded-2xl border border-inherit p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="text-xs font-bold">Update Status</span>
-                          <span className="text-xs text-indigo-400 font-semibold">{progress}% complete</span>
-                        </div>
+                      {/* STATUS & PROGRESS */}
+                      {admin ? (
+                        <div className="mt-5 rounded-2xl border border-inherit p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-bold">Project Status & Work Done</span>
+                            <span className="text-xs text-indigo-400 font-semibold">
+                              {selected.progress ?? (selected.status === "COMPLETED" ? 100 : 0)}% complete
+                            </span>
+                          </div>
 
-                        <div className="grid grid-cols-4 gap-2 mb-4">
-                          {[
-                            { id: "NEW", label: "New" },
-                            { id: "PENDING", label: "Pending" },
-                            { id: "IN_PROGRESS", label: "In Progress" },
-                            { id: "COMPLETED", label: "Completed" },
-                          ].map((s) => (
-                            <button
-                              key={s.id}
-                              onClick={() => void updateProjectStatus(s.id)}
-                              className={`py-2 rounded-xl text-xs font-semibold transition ${
-                                selected.status === s.id
-                                  ? "bg-indigo-600 text-white shadow-md"
-                                  : "border border-inherit text-slate-400 hover:bg-white/5"
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-bold border ${
+                                selected.status === "COMPLETED"
+                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                  : selected.status === "IN_PROGRESS"
+                                  ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+                                  : "bg-amber-500/10 text-amber-400 border-amber-500/20"
                               }`}
                             >
-                              {s.label}
-                            </button>
-                          ))}
+                              {selected.status.replace("_", " ")}
+                            </span>
+                            <span className={`text-[11px] ${mutedText}`}>
+                              Managed by developer ({selected.developer_name || "Assigned Developer"})
+                            </span>
+                          </div>
+
+                          <div className="h-2.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400 transition-all duration-500"
+                              style={{
+                                width: `${selected.progress ?? (selected.status === "COMPLETED" ? 100 : 0)}%`,
+                              }}
+                            />
+                          </div>
                         </div>
+                      ) : (
+                        <div className="mt-5 rounded-2xl border border-inherit p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-bold">Update Status</span>
+                            <span className="text-xs text-indigo-400 font-semibold">{progress}% complete</span>
+                          </div>
 
-                        {/* Slider */}
-                        <label className="block text-xs font-semibold mb-1">Progress Percentage</label>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={progress}
-                          onChange={(e) => setProgress(Number(e.target.value))}
-                          className="w-full accent-indigo-600 h-2 bg-slate-800 rounded-lg cursor-pointer"
-                        />
+                          <div className="grid grid-cols-4 gap-2 mb-4">
+                            {[
+                              { id: "NEW", label: "New" },
+                              { id: "PENDING", label: "Pending" },
+                              { id: "IN_PROGRESS", label: "In Progress" },
+                              { id: "COMPLETED", label: "Completed" },
+                            ].map((s) => (
+                              <button
+                                key={s.id}
+                                onClick={() => void updateProjectStatus(s.id)}
+                                className={`py-2 rounded-xl text-xs font-semibold transition ${
+                                  selected.status === s.id
+                                    ? "bg-indigo-600 text-white shadow-md"
+                                    : "border border-inherit text-slate-400 hover:bg-white/5"
+                                }`}
+                              >
+                                {s.label}
+                              </button>
+                            ))}
+                          </div>
 
-                        {/* Note */}
-                        <textarea
-                          rows={2}
-                          value={message}
-                          onChange={(e) => setMessage(e.target.value)}
-                          placeholder="Add progress note or milestone completed..."
-                          className={`mt-3 w-full rounded-xl border p-3 text-xs outline-none ${inputBg}`}
-                        />
+                          {/* Slider */}
+                          <label className="block text-xs font-semibold mb-1">Progress Percentage</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={progress}
+                            onChange={(e) => setProgress(Number(e.target.value))}
+                            className="w-full accent-indigo-600 h-2 bg-slate-800 rounded-lg cursor-pointer"
+                          />
 
-                        <button
-                          disabled={saving === "update"}
-                          onClick={() => void addUpdate()}
-                          className="mt-3 w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs font-semibold shadow hover:opacity-95 disabled:opacity-50"
-                        >
-                          <Send size={14} />
-                          <span>{saving === "update" ? "Saving..." : "Save Progress Update"}</span>
-                        </button>
-                      </div>
+                          {/* Note */}
+                          <textarea
+                            rows={2}
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            placeholder="Add progress note or milestone completed..."
+                            className={`mt-3 w-full rounded-xl border p-3 text-xs outline-none ${inputBg}`}
+                          />
+
+                          <button
+                            disabled={saving === "update"}
+                            onClick={() => void addUpdate()}
+                            className="mt-3 w-full flex items-center justify-center gap-2 h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-xs font-semibold shadow hover:opacity-95 disabled:opacity-50"
+                          >
+                            <Send size={14} />
+                            <span>{saving === "update" ? "Saving..." : "Save Progress Update"}</span>
+                          </button>
+                        </div>
+                      )}
 
                       {/* UPDATES TIMELINE */}
                       <div className="mt-6">
@@ -961,7 +1046,7 @@ export default function DeveloperWorkspace({
           )}
 
           {/* TAB: DAILY UPDATES */}
-          {activeTab === "daily" && (
+          {activeTab === "daily" && admin && !subAdmin && (
             <div className="space-y-6 max-w-[1600px] mx-auto w-full">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
@@ -1126,60 +1211,193 @@ export default function DeveloperWorkspace({
                 <div>
                   <h3 className={`text-xl font-bold ${dark ? "text-white" : "text-slate-900"}`}>Developer Issue & Bug Tracker</h3>
                   <p className={`text-xs mt-1 ${mutedText}`}>
-                    Log bugs, technical debt, and feature improvements
+                    {admin || subAdmin
+                      ? "Review bugs, technical debt, and issues reported by developers (Read-Only)"
+                      : "Log bugs, technical debt, and feature improvements"}
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowIssueModal(true)}
-                  className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-2 shadow"
-                >
-                  <Plus size={15} />
-                  <span>Report Bug / Issue</span>
-                </button>
+                {!admin && !subAdmin && (
+                  <button
+                    onClick={() => setShowIssueModal(true)}
+                    className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-2 shadow"
+                  >
+                    <Plus size={15} />
+                    <span>Report Bug / Issue</span>
+                  </button>
+                )}
+                {(admin || subAdmin) && (
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1.5 rounded-full text-[11px] font-bold bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                      Read-Only View
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Issues Grid */}
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {issuesList.map((issue) => (
-                  <div key={issue.id} className={`rounded-2xl border p-4.5 ${bgCard} shadow-sm flex flex-col justify-between`}>
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                          issue.type === "BUG" ? "bg-rose-500/10 text-rose-400 border-rose-500/30" : "bg-blue-500/10 text-blue-400 border-blue-500/30"
-                        }`}>
-                          {issue.type}
-                        </span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          issue.status === "RESOLVED" ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"
-                        }`}>
-                          {issue.status}
-                        </span>
+              {issuesList.length === 0 ? (
+                <div className={`rounded-3xl border p-12 text-center text-xs ${bgCard} ${mutedText}`}>
+                  No developer issues or bugs reported yet.
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {issuesList.map((issue) => (
+                    <div
+                      key={issue.id}
+                      onClick={() => setSelectedIssue(issue)}
+                      className={`cursor-pointer rounded-2xl border p-5 ${bgCard} shadow-sm flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-500/40`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-2.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              issue.type === "BUG" ? "bg-rose-500/10 text-rose-400 border-rose-500/30" : "bg-blue-500/10 text-blue-400 border-blue-500/30"
+                            }`}>
+                              {issue.type}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              issue.priority === "URGENT" || issue.priority === "HIGH" ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                            }`}>
+                              {issue.priority}
+                            </span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            issue.status === "RESOLVED" ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"
+                          }`}>
+                            {issue.status}
+                          </span>
+                        </div>
+                        <h4 className="font-bold text-sm leading-snug">{issue.title}</h4>
+                        <div className="mt-1 text-xs text-indigo-400 font-semibold">
+                          Reported by: {issue.developer_name || "Developer"}
+                        </div>
+                        <p className={`mt-2 text-xs line-clamp-3 leading-relaxed ${mutedText}`}>{issue.description}</p>
                       </div>
-                      <h4 className="mt-2.5 font-semibold text-sm leading-snug">{issue.title}</h4>
-                      <p className={`mt-1.5 text-xs line-clamp-2 ${mutedText}`}>{issue.description}</p>
-                    </div>
 
-                    <div className="mt-4 pt-2.5 border-t border-inherit flex items-center justify-between text-xs">
-                      <span className={`text-[11px] mono ${mutedText}`}>{issue.project_name}</span>
-                      {issue.status !== "RESOLVED" && (
-                        <button
-                          onClick={() => {
-                            setIssuesList(prev => prev.map(i => i.id === issue.id ? { ...i, status: "RESOLVED" } : i));
-                            setNotice(`Issue ${issue.id} marked resolved`);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold hover:bg-emerald-500/20"
-                        >
-                          Resolve
-                        </button>
-                      )}
+                      <div className="mt-4 pt-3 border-t border-inherit flex items-center justify-between text-xs">
+                        <span className={`text-[11px] mono font-medium ${mutedText}`}>
+                          {issue.project_name || "General Engineering"}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-indigo-400 hover:underline font-semibold">
+                            Read Details →
+                          </span>
+                          {!admin && !subAdmin && issue.status !== "RESOLVED" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void resolveIssue(issue.id);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold hover:bg-emerald-500/20"
+                            >
+                              Resolve
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
-              {/* LOG ISSUE MODAL */}
+              {/* READ COMPLETE DESCRIPTION MODAL */}
               <AnimatePresence>
-                {showIssueModal && (
+                {selectedIssue && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedIssue(null)} />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className={`relative w-full max-w-[560px] max-h-[85vh] overflow-y-auto rounded-3xl border p-6 lg:p-7 shadow-2xl ${bgCard} z-10`}
+                    >
+                      <div className="flex items-start justify-between pb-3 border-b border-inherit gap-3">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                              selectedIssue.type === "BUG" ? "bg-rose-500/10 text-rose-400 border-rose-500/30" : "bg-blue-500/10 text-blue-400 border-blue-500/30"
+                            }`}>
+                              {selectedIssue.type}
+                            </span>
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                              selectedIssue.priority === "URGENT" || selectedIssue.priority === "HIGH" ? "bg-amber-500/10 text-amber-400 border-amber-500/30" : "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                            }`}>
+                              {selectedIssue.priority} Priority
+                            </span>
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                              selectedIssue.status === "RESOLVED" ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"
+                            }`}>
+                              {selectedIssue.status}
+                            </span>
+                          </div>
+                          <h4 className="font-bold text-lg leading-snug">{selectedIssue.title}</h4>
+                        </div>
+                        <button onClick={() => setSelectedIssue(null)} className={`h-8 w-8 rounded-xl border flex items-center justify-center shrink-0 ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}>
+                          <X size={15} />
+                        </button>
+                      </div>
+
+                      <div className="py-4 space-y-4 text-xs">
+                        <div className="grid grid-cols-2 gap-3 p-3.5 rounded-2xl bg-black/10 border border-inherit">
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Reporting Developer</span>
+                            <span className="font-bold text-indigo-400 text-xs">{selectedIssue.developer_name || "Developer"}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Associated Project</span>
+                            <span className="font-bold text-xs">{selectedIssue.project_name || "General Engineering"}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Date Reported</span>
+                            <span className={`text-[11px] ${mutedText}`}>{new Date(selectedIssue.created_at).toLocaleString()}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Current Status</span>
+                            <span className="font-bold text-xs">{selectedIssue.status}</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                            Full Description
+                          </h5>
+                          <div className={`p-4 rounded-2xl border text-xs leading-relaxed whitespace-pre-wrap ${dark ? "bg-slate-900/50 border-white/10 text-slate-200" : "bg-slate-50 border-slate-200 text-slate-800"}`}>
+                            {selectedIssue.description || "No description provided."}
+                          </div>
+                        </div>
+
+                        {(admin || subAdmin) && (
+                          <div className={`p-3 rounded-xl border text-[11px] ${dark ? "bg-slate-900/30 border-white/5 text-slate-400" : "bg-slate-100 border-slate-200 text-slate-600"}`}>
+                            Read-Only View: Super Admin and Sub-Admin accounts cannot create, edit, delete, or change status of developer reported issues.
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-3 border-t border-inherit flex justify-end gap-2">
+                        {!admin && !subAdmin && selectedIssue.status !== "RESOLVED" && (
+                          <button
+                            onClick={() => void resolveIssue(selectedIssue.id)}
+                            className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+                          >
+                            Mark Resolved
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedIssue(null)}
+                          className={`px-4 py-2 rounded-xl text-xs font-semibold border ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
+
+              {/* LOG ISSUE MODAL (DEVELOPER ONLY) */}
+              <AnimatePresence>
+                {showIssueModal && !admin && !subAdmin && (
                   <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowIssueModal(false)} />
                     <motion.div
@@ -1208,13 +1426,24 @@ export default function DeveloperWorkspace({
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Description</label>
+                          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Description *</label>
                           <textarea
-                            rows={3}
+                            required
+                            rows={4}
                             value={issueForm.description}
                             onChange={e => setIssueForm({ ...issueForm, description: e.target.value })}
                             placeholder="Steps to reproduce, stack trace, or proposed resolution..."
                             className={`w-full rounded-xl border p-2.5 text-xs outline-none ${inputBg}`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Associated Project</label>
+                          <input
+                            value={issueForm.projectName}
+                            onChange={e => setIssueForm({ ...issueForm, projectName: e.target.value })}
+                            placeholder="e.g. ZootechX CRM Core"
+                            className={`h-9 w-full rounded-xl border px-3 text-xs outline-none ${inputBg}`}
                           />
                         </div>
 
@@ -1250,8 +1479,8 @@ export default function DeveloperWorkspace({
                           <button type="button" onClick={() => setShowIssueModal(false)} className={`px-4 py-2 rounded-xl text-xs font-semibold border ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}>
                             Cancel
                           </button>
-                          <button type="submit" className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white">
-                            Log Issue
+                          <button type="submit" disabled={saving === "update"} className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50">
+                            {saving === "update" ? "Submitting..." : "Submit Issue"}
                           </button>
                         </div>
                       </form>
@@ -1263,9 +1492,16 @@ export default function DeveloperWorkspace({
           )}
 
           {/* TAB 4: CREDENTIALS VAULT */}
-          {activeTab === "vault" && (
+          {activeTab === "vault" && !subAdmin && (
             <div className="max-w-[1600px] mx-auto w-full">
               <CredentialsVault dark={dark} />
+            </div>
+          )}
+
+          {/* TAB 5: SCOPE OF WORK (SOW) */}
+          {activeTab === "sows" && (
+            <div className="max-w-[1600px] mx-auto w-full">
+              <ScopeOfWorkWorkspace dark={dark} readOnly={true} />
             </div>
           )}
 
@@ -1550,6 +1786,8 @@ export default function DeveloperWorkspace({
                     ? "Projects & Tasks"
                     : activeTab === "daily"
                     ? "Daily Developer Updates"
+                    : activeTab === "sows"
+                    ? "Scope of Work (SOW)"
                     : activeTab === "issues"
                     ? "Issues & Bug Tracker"
                     : activeTab === "team"

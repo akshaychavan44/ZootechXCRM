@@ -88,7 +88,13 @@ const statusBadge: Record<ScopeOfWork["status"], { bg: string; text: string; bor
   Rejected: { bg: "bg-rose-500/10", text: "text-rose-400", border: "border-rose-500/30" },
 };
 
-export default function ScopeOfWorkWorkspace({ dark = true }: { dark?: boolean }) {
+export default function ScopeOfWorkWorkspace({
+  dark = true,
+  readOnly = false,
+}: {
+  dark?: boolean;
+  readOnly?: boolean;
+}) {
   const [sows, setSows] = useState<ScopeOfWork[]>([]);
   const [activeTemplate, setActiveTemplate] = useState<GlobalSowTemplate | null>(null);
   const [clients, setClients] = useState<ClientOption[]>([]);
@@ -439,15 +445,17 @@ export default function ScopeOfWorkWorkspace({ dark = true }: { dark?: boolean }
           >
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
           </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className={`h-10 px-4 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md ${
-              dark ? "bg-[#cca45f] text-black hover:bg-[#d8b26e]" : "bg-[#a07432] text-white hover:bg-[#8f6426]"
-            }`}
-          >
-            <Plus size={15} />
-            <span>Generate SOW</span>
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className={`h-10 px-4 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md ${
+                dark ? "bg-[#cca45f] text-black hover:bg-[#d8b26e]" : "bg-[#a07432] text-white hover:bg-[#8f6426]"
+              }`}
+            >
+              <Plus size={15} />
+              <span>Generate SOW</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -566,7 +574,7 @@ export default function ScopeOfWorkWorkspace({ dark = true }: { dark?: boolean }
                             <Share2 size={12} />
                             <span>Active</span>
                           </button>
-                        ) : (
+                        ) : !readOnly ? (
                           <button
                             onClick={() => handleGenerateShareLink(sow)}
                             className={`text-[11px] ${muted} hover:text-[#cca45f] flex items-center gap-1`}
@@ -574,6 +582,8 @@ export default function ScopeOfWorkWorkspace({ dark = true }: { dark?: boolean }
                             <Share2 size={12} />
                             <span>Generate</span>
                           </button>
+                        ) : (
+                          <span className={`text-[11px] ${muted}`}>—</span>
                         )}
                       </td>
                       <td className="p-3.5 text-right">
@@ -587,34 +597,38 @@ export default function ScopeOfWorkWorkspace({ dark = true }: { dark?: boolean }
                           >
                             <Eye size={13} />
                           </button>
-                          <button
-                            title="Revise / Edit SOW"
-                            onClick={() => handleOpenEditModal(sow)}
-                            className={`p-1.5 rounded-lg border transition ${
-                              dark ? "border-[#222d42] hover:bg-white/5 text-blue-400" : "border-[#eee6da] hover:bg-black/5 text-blue-600"
-                            }`}
-                          >
-                            <Edit3 size={13} />
-                          </button>
-                          <button
-                            title="Send via Email"
-                            onClick={() => handleOpenEmailModal(sow)}
-                            className={`p-1.5 rounded-lg border transition ${
-                              dark ? "border-[#222d42] hover:bg-purple-500/10 text-purple-400" : "border-[#eee6da] hover:bg-purple-50 text-purple-600"
-                            }`}
-                          >
-                            <Mail size={13} />
-                          </button>
-                          {sow.status !== "Approved" && (
-                            <button
-                              title="Mark Approved"
-                              onClick={() => handleStatusUpdate(sow, "Approved")}
-                              className={`p-1.5 rounded-lg border transition ${
-                                dark ? "border-[#222d42] hover:bg-emerald-500/10 text-emerald-400" : "border-[#eee6da] hover:bg-emerald-50 text-emerald-600"
-                              }`}
-                            >
-                              <CheckCircle2 size={13} />
-                            </button>
+                          {!readOnly && (
+                            <>
+                              <button
+                                title="Revise / Edit SOW"
+                                onClick={() => handleOpenEditModal(sow)}
+                                className={`p-1.5 rounded-lg border transition ${
+                                  dark ? "border-[#222d42] hover:bg-white/5 text-blue-400" : "border-[#eee6da] hover:bg-black/5 text-blue-600"
+                                }`}
+                              >
+                                <Edit3 size={13} />
+                              </button>
+                              <button
+                                title="Send via Email"
+                                onClick={() => handleOpenEmailModal(sow)}
+                                className={`p-1.5 rounded-lg border transition ${
+                                  dark ? "border-[#222d42] hover:bg-purple-500/10 text-purple-400" : "border-[#eee6da] hover:bg-purple-50 text-purple-600"
+                                }`}
+                              >
+                                <Mail size={13} />
+                              </button>
+                              {sow.status !== "Approved" && (
+                                <button
+                                  title="Mark Approved"
+                                  onClick={() => handleStatusUpdate(sow, "Approved")}
+                                  className={`p-1.5 rounded-lg border transition ${
+                                    dark ? "border-[#222d42] hover:bg-emerald-500/10 text-emerald-400" : "border-[#eee6da] hover:bg-emerald-50 text-emerald-600"
+                                  }`}
+                                >
+                                  <CheckCircle2 size={13} />
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>
@@ -1122,28 +1136,36 @@ export default function ScopeOfWorkWorkspace({ dark = true }: { dark?: boolean }
 
               {/* Footer */}
               <div className="pt-3 border-t border-inherit flex items-center justify-between">
-                <button
-                  onClick={() => {
-                    handleOpenEditModal(previewSow);
-                    setPreviewSow(null);
-                  }}
-                  className={`h-9 px-4 rounded-xl border text-xs font-semibold flex items-center gap-1.5 ${dark ? "border-[#222d42] hover:bg-white/5" : "border-[#eee6da] hover:bg-slate-50"}`}
-                >
-                  <Edit3 size={13} />
-                  <span>Revise SOW</span>
-                </button>
-
-                <div className="flex items-center gap-2">
+                {!readOnly ? (
                   <button
                     onClick={() => {
-                      handleOpenEmailModal(previewSow);
+                      handleOpenEditModal(previewSow);
                       setPreviewSow(null);
                     }}
-                    className="h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow"
+                    className={`h-9 px-4 rounded-xl border text-xs font-semibold flex items-center gap-1.5 ${dark ? "border-[#222d42] hover:bg-white/5" : "border-[#eee6da] hover:bg-slate-50"}`}
                   >
-                    <Mail size={13} />
-                    <span>Email Proposal</span>
+                    <Edit3 size={13} />
+                    <span>Revise SOW</span>
                   </button>
+                ) : (
+                  <div className={`text-xs ${muted}`}>
+                    Read-Only Document View
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  {!readOnly && (
+                    <button
+                      onClick={() => {
+                        handleOpenEmailModal(previewSow);
+                        setPreviewSow(null);
+                      }}
+                      className="h-9 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow"
+                    >
+                      <Mail size={13} />
+                      <span>Email Proposal</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => setPreviewSow(null)}
                     className="h-9 px-4 rounded-xl border border-inherit text-xs font-semibold"

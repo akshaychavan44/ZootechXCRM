@@ -1,15 +1,19 @@
+import dynamic from "next/dynamic";
 import Login from "./components/Login";
-import SalesDashboard from "./components/SalesDashboard";
-import SubAdminDashboard from "./components/SubAdminDashboard";
-import DeveloperWorkspace from "./components/DeveloperWorkspace";
-import PaymentsWorkspace from "./components/PaymentsWorkspace";
-import CredentialsVault from "./components/CredentialsVault";
-import DigitalMarketingWorkspace from "./components/DigitalMarketingWorkspace";
-import ScopeOfWorkWorkspace from "./components/ScopeOfWorkWorkspace";
-import AuditLogsViewer from "./components/AuditLogsViewer";
-import UniversalTasksWorkspace from "./components/UniversalTasksWorkspace";
-import PublicSowViewer from "./components/PublicSowViewer";
-import SuperAdminSettings, { SuperAdminSettingsTab } from "./components/SuperAdminSettings";
+import type { SuperAdminSettingsTab } from "./components/SuperAdminSettings";
+
+const SalesDashboard = dynamic(() => import("./components/SalesDashboard"), { ssr: false });
+const SubAdminDashboard = dynamic(() => import("./components/SubAdminDashboard"), { ssr: false });
+const DeveloperWorkspace = dynamic(() => import("./components/DeveloperWorkspace"), { ssr: false });
+const PaymentsWorkspace = dynamic(() => import("./components/PaymentsWorkspace"), { ssr: false });
+const CredentialsVault = dynamic(() => import("./components/CredentialsVault"), { ssr: false });
+const DigitalMarketingWorkspace = dynamic(() => import("./components/DigitalMarketingWorkspace"), { ssr: false });
+const ScopeOfWorkWorkspace = dynamic(() => import("./components/ScopeOfWorkWorkspace"), { ssr: false });
+const AuditLogsViewer = dynamic(() => import("./components/AuditLogsViewer"), { ssr: false });
+const UniversalTasksWorkspace = dynamic(() => import("./components/UniversalTasksWorkspace"), { ssr: false });
+const PublicSowViewer = dynamic(() => import("./components/PublicSowViewer"), { ssr: false });
+const SuperAdminSettings = dynamic(() => import("./components/SuperAdminSettings"), { ssr: false });
+
 import { ClientsPage, CreateInvoicePage, DashboardPage, ExpensesPage, FollowUpsPage, InvoicesPage, LeadsPage, PaymentsPage, QuotationsPage } from "./components/pages/CrmPages";
 import "./app.css";
 import { apiFetch, AuthUser } from "./lib/api";
@@ -22,7 +26,7 @@ import {
   Phone, MessageCircle, Mail, Calendar, MapPin, TrendingUp, TrendingDown, Clock,
   Check, AlertCircle, ArrowLeft, Save, Wand2, Sparkles, Bot, Filter, KeyRound,
   Download, Edit3, Trash2, MoreHorizontal, ChevronRight, Briefcase, Home, Store, Factory, LandPlot,
-  LogOut, Crown, CheckCircle2, CheckSquare, Shield
+  LogOut, Crown, CheckCircle2, CheckSquare, Shield, Megaphone
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -33,7 +37,7 @@ import {
 type LeadPriority = "High" | "Medium" | "Low";
 type LeadStatus = "New" | "Contacted" | "Follow-up" | "Qualified" | "Negotiation" | "Converted" | "Lost";
 type FollowUpType = "Phone Call" | "WhatsApp" | "Email" | "Meeting" | "Site Visit";
-type FollowUpStatus = "Scheduled" | "Completed" | "Rescheduled" | "Cancelled" | "Overdue";
+type FollowUpStatus = "Scheduled" | "Completed" | "Contacted" | "Converted" | "Rescheduled" | "Cancelled" | "Overdue";
 
 interface Lead {
   id: string; name: string; company: string; email: string; phone: string;
@@ -53,7 +57,7 @@ interface Invoice {
   placeOfSupply: string; items: InvoiceItem[]; subtotal: number; total: number; gstTotal: number;
   cgst: number; sgst: number; igst: number; status: "Draft" | "Sent" | "Paid" | "Overdue"; amountPaid: number; createdByName?: string | null;
 }
-interface Client { id: string; businessName: string; name: string; gstin: string; email: string; phone: string; address: string; state: string; creditLimit: number; }
+interface Client { id: string; businessName: string; name: string; gstin: string; email: string; phone: string; address: string; state: string; creditLimit: number; projects?: Array<{ id: string; title: string; name: string; status: string; category?: string; budget?: number; deadline?: string }>; }
 interface Quotation { id: string; clientName: string; amount: number; validUntil: string; status: string; }
 
 type ApiLead = {
@@ -71,10 +75,11 @@ const toLead = (lead: ApiLead): Lead => ({
 type ApiFollowUp = { id: string; lead_id: string | null; lead_name: string; company: string | null; property: string | null; type: string; followup_date: string; followup_time: string | null; assigned_to: string | null; priority: string | null; status: string; notes: string | null; completed_at?: string | null };
 const toFollowUp = (followup: ApiFollowUp): FollowUp => ({ id: followup.id, leadId: followup.lead_id ?? "", leadName: followup.lead_name, company: followup.company ?? "", property: followup.property ?? "", type: followup.type as FollowUpType, date: followup.followup_date, time: followup.followup_time ?? "", assignedTo: followup.assigned_to ?? "", priority: (followup.priority as LeadPriority) ?? "Medium", status: followup.status as FollowUpStatus, notes: followup.notes ?? "", completedAt:followup.completed_at ?? null });
 
-type ApiClient = { id: string; name: string; company: string | null; email: string | null; phone: string | null; gst_number: string | null };
+type ApiClient = { id: string; name: string; company: string | null; email: string | null; phone: string | null; gst_number: string | null; projects?: Array<{ id: string; title: string; name: string; status: string; category?: string; budget?: number; deadline?: string }> };
 const toClient = (client: ApiClient): Client => ({
   id: client.id, businessName: client.company ?? client.name, name: client.name, gstin: client.gst_number ?? "",
   email: client.email ?? "", phone: client.phone ?? "", address: "", state: "27-Maharashtra", creditLimit: 0,
+  projects: client.projects ?? [],
 });
 type ApiQuotation = { quotation_number: string; client_name: string; amount: string | number; valid_until: string; status: string };
 const toQuotation = (quotation: ApiQuotation): Quotation => ({ id: quotation.quotation_number, clientName: quotation.client_name, amount: Number(quotation.amount), validUntil: quotation.valid_until.slice(0, 10), status: quotation.status });
@@ -211,6 +216,8 @@ export default function App() {
   const [leadFollowUpTime, setLeadFollowUpTime] = useState("10:00 AM");
   const [followUpForm, setFollowUpForm] = useState<Partial<FollowUp>>({ type:"Phone Call", priority:"Medium", assignedTo:"Aarav" });
   const [clientForm, setClientForm] = useState<Partial<Client>>({ state:"27-Maharashtra" });
+  const [clientModalError, setClientModalError] = useState<string | null>(null);
+  const [clientSubmitting, setClientSubmitting] = useState(false);
   const [quoteForm, setQuoteForm] = useState<Partial<Quotation>>({ status:"Draft" });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -291,11 +298,20 @@ export default function App() {
     if (!isLoggedIn) return;
     const pollNotifications = async () => {
       try {
-        const response = await apiFetch("/api/notifications");
+        const [response, fuRes] = await Promise.all([
+          apiFetch("/api/notifications"),
+          apiFetch("/api/followups")
+        ]);
         if (response.ok) {
           const resJson = await response.json();
           if (Array.isArray(resJson.data)) {
             setNotifications(resJson.data.map(toNotification));
+          }
+        }
+        if (fuRes.ok) {
+          const fuJson = await fuRes.json();
+          if (Array.isArray(fuJson.data)) {
+            setFollowUps(fuJson.data.map(toFollowUp));
           }
         }
       } catch {}
@@ -576,6 +592,26 @@ export default function App() {
     }
   };
 
+  const handleUpdateFollowUpStatus = async (followUpId: string, newStatus: string) => {
+    setFollowUps(current => current.map(item => item.id === followUpId ? { ...item, status: newStatus as FollowUpStatus } : item));
+    try {
+      const response = await apiFetch(`/api/followups/${followUpId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.data) throw new Error(data.message || "Unable to update follow-up");
+      setFollowUps(current => current.map(item => item.id === followUpId ? toFollowUp(data.data as ApiFollowUp) : item));
+      pushRealtimeNotification("Follow-up Updated", `Follow-up updated to ${newStatus}`);
+    } catch {
+      const res = await apiFetch("/api/followups");
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.data)) setFollowUps(json.data.map(toFollowUp));
+      }
+    }
+  };
+
   const handleDeleteFollowUp = async (followUp: FollowUp) => {
     try {
       const response = await apiFetch(`/api/followups/${followUp.id}`, { method:"DELETE" });
@@ -661,18 +697,55 @@ export default function App() {
   };
 
   const handleCreateClient = async () => {
-    if (!clientForm.businessName || !clientForm.phone) return;
+    setClientModalError(null);
+    const businessName = (clientForm.businessName || "").trim();
+    const contactName = (clientForm.name || "").trim();
+    const primaryName = businessName || contactName;
+
+    if (!primaryName) {
+      setClientModalError("Please enter a Business Name or Contact Name.");
+      return;
+    }
+
+    setClientSubmitting(true);
     try {
-      const response = await apiFetch("/api/clients", { method: "POST", body: JSON.stringify({ name: clientForm.name || clientForm.businessName, company: clientForm.businessName, email: clientForm.email || undefined, phone: clientForm.phone, gstNumber: clientForm.gstin || undefined }) });
+      const response = await apiFetch("/api/clients", {
+        method: "POST",
+        body: JSON.stringify({
+          name: contactName || businessName,
+          company: businessName || contactName,
+          businessName: businessName || contactName,
+          email: clientForm.email?.trim() || undefined,
+          phone: clientForm.phone?.trim() || "N/A",
+          gstNumber: clientForm.gstin?.trim() || undefined,
+          gstin: clientForm.gstin?.trim() || undefined,
+        }),
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Unable to save client");
       const newClient = toClient(data.data);
-      setClients([newClient, ...clients]);
-      pushRealtimeNotification("Client Onboarded", `${newClient.name || newClient.businessName} was added to CRM`);
+      setClients(current => [newClient, ...current]);
+      pushRealtimeNotification("Client Onboarded", `${newClient.businessName || newClient.name} was added to CRM`);
       setShowCreateClient(false);
+      setClientModalError(null);
       setClientForm({ state: "27-Maharashtra" });
       setToastMessage("Client created successfully.");
-    } catch (error) { setNotifications(current => [{ id:Date.now().toString(), title:"Client Failed", message:error instanceof Error ? error.message : "Unable to save client", text:error instanceof Error ? error.message : "Unable to save client", time:"Just now", unread:true, createdAt:new Date().toISOString() }, ...current]); }
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : "Unable to save client";
+      setClientModalError(errMsg);
+      setToastMessage(`Error: ${errMsg}`);
+      setNotifications(current => [{
+        id: Date.now().toString(),
+        title: "Client Failed",
+        message: errMsg,
+        text: errMsg,
+        time: "Just now",
+        unread: true,
+        createdAt: new Date().toISOString(),
+      }, ...current]);
+    } finally {
+      setClientSubmitting(false);
+    }
   };
 
   const calculateInvoiceTotals = (items: InvoiceItem[], place: string) => {
@@ -905,6 +978,7 @@ if (userRole === "DIGITAL_MARKETING") {
                 <div className={`absolute right-0 top-12 w-60 rounded-3xl border shadow-2xl z-30 p-2 ${bgCard} backdrop-blur-2xl`}>
                   {[
                     { label:"New Invoice", desc:"Create GST invoice", icon:FileText, action:()=> { setCurrentPage("invoices/new"); setNewDropdownOpen(false);} },
+                    { label:"New Client", desc:"Add enterprise client", icon:UserPlus, action:()=> { setShowCreateClient(true); setClientModalError(null); setNewDropdownOpen(false);} },
                     { label:"New Lead", desc:"Add potential client", icon:UserPlus, action:()=> { setShowAddLead(true); setNewDropdownOpen(false);} },
                     { label:"Scope of Work", desc:"Draft & send SOW proposal", icon:FileText, action:()=> { setCurrentPage("sows"); setNewDropdownOpen(false);} },
                     { label:"Company Task", desc:"Assign cross-functional task", icon:CheckSquare, action:()=> { setCurrentPage("tasks"); setNewDropdownOpen(false);} },
@@ -1458,7 +1532,7 @@ if (userRole === "DIGITAL_MARKETING") {
               </div>
 
               <div className="flex items-center gap-2 overflow-x-auto">
-                {["All","Today","Upcoming","Overdue","Completed"].map(tab=> (
+                {["All","Today","Upcoming","Overdue","Completed","Contacted","Converted"].map(tab=> (
                   <button key={tab} onClick={()=> setFollowUpFilter(tab)} className={`h-8 px-3 rounded-full border text-[13px] whitespace-nowrap ${followUpFilter===tab? "bg-slate-900 text-white dark:bg-white dark:text-black border-transparent" : bgCard}`}>{tab}</button>
                 ))}
               </div>
@@ -1477,10 +1551,40 @@ if (userRole === "DIGITAL_MARKETING") {
                           <td className="p-3 text-[12px] flex items-center gap-1"><span className={`h-6 w-6 rounded-lg flex items-center justify-center ${isDark?"bg-[#23233a]":"bg-slate-100"}`}>{f.type==="Phone Call"?<Phone size={12}/>: f.type==="WhatsApp"?<MessageCircle size={12}/>: f.type==="Email"?<Mail size={12}/>:<Calendar size={12}/>}</span>{f.type}</td>
                           <td className="p-3 text-[12px]">{f.assignedTo}</td>
                           <td className="p-3 text-[11px]">{f.priority}</td>
-                          <td className="p-3"><span className={`text-[11px] px-2 py-1 rounded-full border ${f.status==="Overdue"?"bg-red-500/10 text-red-600 border-red-500/20": f.status==="Completed"?"bg-emerald-500/10 text-emerald-600 border-emerald-500/20":"bg-amber-500/10 text-amber-600 border-amber-500/20"}`}>{f.status}</span></td>
+                          <td className="p-3">
+                            <select
+                              value={f.status}
+                              onChange={(e) => void handleUpdateFollowUpStatus(f.id, e.target.value)}
+                              className={`h-7 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border cursor-pointer outline-none transition ${
+                                f.status === "Completed"
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                  : f.status === "Converted"
+                                  ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                                  : f.status === "Contacted"
+                                  ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                                  : f.status === "Overdue"
+                                  ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                                  : f.status === "Rescheduled"
+                                  ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30"
+                                  : f.status === "Cancelled"
+                                  ? "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30"
+                                  : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                              }`}
+                            >
+                              <option value="Scheduled" className={isDark ? "bg-[#121826] text-white" : "bg-white text-black"}>Scheduled</option>
+                              <option value="Contacted" className={isDark ? "bg-[#121826] text-white" : "bg-white text-black"}>Contacted</option>
+                              <option value="Completed" className={isDark ? "bg-[#121826] text-white" : "bg-white text-black"}>Completed</option>
+                              <option value="Converted" className={isDark ? "bg-[#121826] text-white" : "bg-white text-black"}>Converted</option>
+                              <option value="Rescheduled" className={isDark ? "bg-[#121826] text-white" : "bg-white text-black"}>Rescheduled</option>
+                              <option value="Cancelled" className={isDark ? "bg-[#121826] text-white" : "bg-white text-black"}>Cancelled</option>
+                              <option value="Overdue" className={isDark ? "bg-[#121826] text-white" : "bg-white text-black"}>Overdue</option>
+                            </select>
+                          </td>
                           <td className="p-3 flex gap-1">
-                            <button onClick={()=> void handleCompleteFollowUp(f)} className="h-7 px-2 rounded-lg bg-emerald-600 text-white text-[11px]">Complete</button>
-                            <button onClick={()=> void handleDeleteFollowUp(f)} className={`h-7 w-7 rounded-lg border flex items-center justify-center ${bgCard}`}><Trash2 size={12}/></button>
+                            {f.status !== "Completed" && (
+                              <button onClick={()=> void handleCompleteFollowUp(f)} className="h-7 px-2 rounded-lg bg-emerald-600 text-white text-[11px]">Complete</button>
+                            )}
+                            <button onClick={()=> void handleDeleteFollowUp(f)} className={`h-7 w-7 rounded-lg border flex items-center justify-center ${bgCard}`} title="Delete follow-up"><Trash2 size={12}/></button>
                           </td>
                         </tr>
                       ))}
@@ -1725,7 +1829,7 @@ if (userRole === "DIGITAL_MARKETING") {
             <ClientsPage>
             <div className="max-w-[1600px] mx-auto space-y-4">
               <div className="flex items-center justify-between"><div><h1 className={`text-[22px] font-bold ${textPrimary}`}>Clients</h1><p className={`text-[13px] ${textMuted}`}>Manage your clients</p></div><button onClick={()=> setShowCreateClient(true)} className="h-9 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-[13px] font-medium flex items-center gap-2"><Plus size={16}/>Add Client</button></div>
-              <div className={`rounded-2xl border overflow-hidden ${bgCard}`}><div className="overflow-x-auto"><table className="w-full min-w-[700px]"><thead className={`${isDark?"bg-[#0f0f1a]":"bg-slate-50"} border-b ${borderC} text-[11px] ${textMuted} uppercase tracking-widest`}><tr><th className="text-left p-3">Business</th><th className="text-left p-3">Contact</th><th className="text-left p-3">GSTIN</th><th className="text-left p-3">State</th><th className="text-left p-3">Credit Limit</th></tr></thead><tbody className={`divide-y ${borderC}`}>{clients.map(c=> <tr key={c.id}><td className="p-3"><div className="font-medium text-[13px]">{c.businessName}</div><div className={`text-[11px] ${textMuted}`}>{c.name}</div></td><td className="p-3 text-[12px]"><div>{c.email}</div><div className={textMuted}>{c.phone}</div></td><td className="p-3 mono text-[11px]">{c.gstin||"—"}</td><td className="p-3 text-[12px]">{c.state}</td><td className="p-3 text-[13px]">₹{c.creditLimit.toLocaleString()}</td></tr>)}</tbody></table></div></div>
+              <div className={`rounded-2xl border overflow-hidden ${bgCard}`}><div className="overflow-x-auto"><table className="w-full min-w-[700px]"><thead className={`${isDark?"bg-[#0f0f1a]":"bg-slate-50"} border-b ${borderC} text-[11px] ${textMuted} uppercase tracking-widest`}><tr><th className="text-left p-3">Business</th><th className="text-left p-3">Contact</th><th className="text-left p-3">GSTIN</th><th className="text-left p-3">State</th><th className="text-left p-3">Projects</th></tr></thead><tbody className={`divide-y ${borderC}`}>{clients.map(c=> <tr key={c.id}><td className="p-3"><div className="font-medium text-[13px]">{c.businessName}</div><div className={`text-[11px] ${textMuted}`}>{c.name}</div></td><td className="p-3 text-[12px]"><div>{c.email}</div><div className={textMuted}>{c.phone}</div></td><td className="p-3 mono text-[11px]">{c.gstin||"—"}</td><td className="p-3 text-[12px]">{c.state}</td><td className="p-3 text-[12px]">{c.projects && c.projects.length > 0 ? <div className="flex flex-wrap gap-1.5">{c.projects.map(p => <span key={p.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">{p.title || p.name} <span className="font-bold opacity-80">({p.status})</span></span>)}</div> : <span className={`text-[11px] ${textMuted}`}>No active projects</span>}</td></tr>)}</tbody></table></div></div>
             </div>
             </ClientsPage>
           )}
@@ -1748,7 +1852,7 @@ if (userRole === "DIGITAL_MARKETING") {
 
           {currentPage === "tasks" && (
             <div className="max-w-[1600px] mx-auto w-full">
-              <UniversalTasksWorkspace dark={isDark} />
+              <UniversalTasksWorkspace dark={isDark} canCreate={true} canUpdateStatus={false} />
             </div>
           )}
 
@@ -1821,7 +1925,7 @@ if (userRole === "DIGITAL_MARKETING") {
               <div className={`p-3 rounded-xl border border-amber-500/30 ${isDark?"bg-amber-500/10":"bg-amber-50"}`}>
                 <div className="text-[11px] font-semibold text-amber-600 flex items-center gap-1"><Calendar size={12}/>Next Follow-up</div>
                 <div className="grid grid-cols-3 gap-2 mt-2">
-                  <div className="flex min-w-0 gap-1"><input ref={addLeadDateRef} type="date" value={leadForm.nextFollowUp? new Date(leadForm.nextFollowUp).toISOString().split("T")[0] : ""} onChange={e=> setLeadForm({...leadForm, nextFollowUp:new Date(e.target.value).toISOString()})} className={`min-w-0 flex-1 h-9 rounded-xl border px-2 text-[12px] ${inputCls}`}/><button type="button" aria-label="Open lead due date calendar" onClick={() => { const picker = addLeadDateRef.current as (HTMLInputElement & { showPicker?: () => void }) | null; try { picker?.showPicker?.(); } catch {} picker?.focus(); }} className={`h-9 w-9 shrink-0 rounded-xl border flex items-center justify-center ${bgCard}`}><Calendar size={14}/></button></div>
+                  <input type="date" value={leadForm.nextFollowUp? new Date(leadForm.nextFollowUp).toISOString().split("T")[0] : ""} onChange={e=> setLeadForm({...leadForm, nextFollowUp:new Date(e.target.value).toISOString()})} className={`w-full h-9 rounded-xl border px-2 text-[12px] ${inputCls}`}/>
                   <select value={leadForm.followUpType} onChange={e=> setLeadForm({...leadForm, followUpType:e.target.value as any})} className={`h-9 rounded-xl border px-2 text-[12px] ${inputCls}`}><option>Phone Call</option><option>WhatsApp</option><option>Email</option><option>Meeting</option><option>Site Visit</option></select>
                   <select value={leadFollowUpTime} onChange={e=> setLeadFollowUpTime(e.target.value)} className={`h-9 rounded-xl border px-2 text-[12px] ${inputCls}`}>
                     {followUpTimeOptions.map(time => (
@@ -1845,7 +1949,7 @@ if (userRole === "DIGITAL_MARKETING") {
             <div className="p-5 space-y-3">
               <div><label className="text-[11px] font-medium">Lead / Client</label><select value={followUpForm.leadId||""} onChange={e=> { const value = e.target.value; const l = leads.find(x=> x.id===value); const c = value.startsWith("client:") ? clients.find(x=> x.id===value.slice(7)) : undefined; setFollowUpForm({...followUpForm, leadId:value, leadName:c?.name||l?.name||"", company:c?.businessName||l?.company||"", property:c ? "" : `${l?.propertyType} - ${l?.location}`}); }} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}><option value="">Select lead or client</option><optgroup label="Leads">{leads.map(l=> <option key={l.id} value={l.id}>{l.name} - {l.company}</option>)}</optgroup><optgroup label="Clients">{clients.map(c=> <option key={c.id} value={`client:${c.id}`}>{c.businessName}{c.name && c.name!==c.businessName ? ` - ${c.name}` : ""}</option>)}</optgroup></select></div>
               <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-medium">Type</label><select value={followUpForm.type} onChange={e=> setFollowUpForm({...followUpForm, type:e.target.value as any})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}><option>Phone Call</option><option>WhatsApp</option><option>Email</option><option>Meeting</option><option>Site Visit</option></select></div><div><label className="text-[11px] font-medium">Priority</label><select value={followUpForm.priority} onChange={e=> setFollowUpForm({...followUpForm, priority:e.target.value as any})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}><option>High</option><option>Medium</option><option>Low</option></select></div></div>
-              <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-medium">Date</label><div className="mt-1 flex gap-1"><input ref={followUpDateRef} type="date" value={followUpForm.date||""} onChange={e=> setFollowUpForm({...followUpForm, date:e.target.value})} className={`min-w-0 flex-1 h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}/><button type="button" aria-label="Open follow-up date calendar" onClick={() => { const picker = followUpDateRef.current as (HTMLInputElement & { showPicker?: () => void }) | null; try { picker?.showPicker?.(); } catch {} picker?.focus(); }} className={`h-9 w-9 rounded-xl border flex items-center justify-center ${bgCard}`}><Calendar size={14}/></button></div></div><div><label className="text-[11px] font-medium">Time</label><select value={followUpForm.time||"10:00 AM"} onChange={e=> setFollowUpForm({...followUpForm, time:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}>{followUpTimeOptions.map(time => <option key={time} value={time}>{time}</option>)}</select></div></div>
+              <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-medium">Date</label><input type="date" value={followUpForm.date||""} onChange={e=> setFollowUpForm({...followUpForm, date:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}/></div><div><label className="text-[11px] font-medium">Time</label><select value={followUpForm.time||"10:00 AM"} onChange={e=> setFollowUpForm({...followUpForm, time:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}>{followUpTimeOptions.map(time => <option key={time} value={time}>{time}</option>)}</select></div></div>
               <div><label className="text-[11px] font-medium">Assigned To</label><select value={followUpForm.assignedTo} onChange={e=> setFollowUpForm({...followUpForm, assignedTo:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}><option>Aarav</option><option>Priya</option><option>Rohan</option></select></div>
               <div><label className="text-[11px] font-medium">Notes</label><textarea value={followUpForm.notes||""} onChange={e=> setFollowUpForm({...followUpForm, notes:e.target.value})} className={`mt-1 w-full h-20 rounded-xl border p-3 text-[13px] ${inputCls}`}/></div>
               <div className={`p-2.5 rounded-xl border text-[11px] ${isDark?"bg-[#1c1c2e]":"bg-slate-50"} ${borderC}`}>Reminder: 15 min before • Auto notification</div>
@@ -1858,16 +1962,112 @@ if (userRole === "DIGITAL_MARKETING") {
       {/* CLIENT MODAL */}
       {showCreateClient && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={()=> setShowCreateClient(false)}/>
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={()=> { setShowCreateClient(false); setClientModalError(null); }}/>
           <div className={`relative w-full max-w-[520px] rounded-2xl border shadow-2xl ${bgCard}`}>
-            <div className={`p-5 border-b ${borderC} flex items-center justify-between`}><div className="font-bold">Add Client</div><button onClick={()=> setShowCreateClient(false)} className={`h-8 w-8 rounded-xl border flex items-center justify-center ${bgCard}`}><X size={16}/></button></div>
+            <div className={`p-5 border-b ${borderC} flex items-center justify-between`}>
+              <div>
+                <div className="font-bold text-[16px]">Add Client</div>
+                <p className={`text-[11px] ${textMuted}`}>Create an enterprise client record in CRM</p>
+              </div>
+              <button onClick={()=> { setShowCreateClient(false); setClientModalError(null); }} className={`h-8 w-8 rounded-xl border flex items-center justify-center ${bgCard}`}><X size={16}/></button>
+            </div>
             <div className="p-5 space-y-3">
-              <div><label className="text-[11px] font-medium">Business Name *</label><input value={clientForm.businessName||""} onChange={e=> setClientForm({...clientForm, businessName:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}/></div>
-              <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-medium">Name</label><input value={clientForm.name||""} onChange={e=> setClientForm({...clientForm, name:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}/></div><div><label className="text-[11px] font-medium">GSTIN AI validation</label><input value={clientForm.gstin||""} onChange={e=> setClientForm({...clientForm, gstin:e.target.value})} placeholder="27ABCDE1234F1Z5" className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] mono ${inputCls}`}/></div></div>
-              <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-medium">Email</label><input value={clientForm.email||""} onChange={e=> setClientForm({...clientForm, email:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}/></div><div><label className="text-[11px] font-medium">Phone *</label><input value={clientForm.phone||""} onChange={e=> setClientForm({...clientForm, phone:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}/></div></div>
-              <div><label className="text-[11px] font-medium">Billing Address</label><input value={clientForm.address||""} onChange={e=> setClientForm({...clientForm, address:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}/></div>
-              <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-medium">State</label><select value={clientForm.state} onChange={e=> setClientForm({...clientForm, state:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}><option>27-Maharashtra</option><option>29-Karnataka</option><option>07-Delhi</option></select></div><div><label className="text-[11px] font-medium">Credit Limit</label><input type="number" value={clientForm.creditLimit||""} onChange={e=> setClientForm({...clientForm, creditLimit:Number(e.target.value)})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}/></div></div>
-              <button onClick={handleCreateClient} className="w-full h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-medium text-[13px]">Save Client</button>
+              {clientModalError && (
+                <div className="p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs flex items-center gap-2">
+                  <span className="font-semibold">Error:</span> {clientModalError}
+                </div>
+              )}
+              <div>
+                <label className="text-[11px] font-medium">Business / Company Name *</label>
+                <input
+                  value={clientForm.businessName||""}
+                  onChange={e=> { setClientModalError(null); setClientForm({...clientForm, businessName:e.target.value}); }}
+                  placeholder="e.g. Acme Global Logistics"
+                  className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium">Contact Person Name</label>
+                  <input
+                    value={clientForm.name||""}
+                    onChange={e=> { setClientModalError(null); setClientForm({...clientForm, name:e.target.value}); }}
+                    placeholder="e.g. John Doe"
+                    className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium">GSTIN (Optional)</label>
+                  <input
+                    value={clientForm.gstin||""}
+                    onChange={e=> setClientForm({...clientForm, gstin:e.target.value})}
+                    placeholder="27ABCDE1234F1Z5"
+                    className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] mono ${inputCls}`}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium">Email (Optional)</label>
+                  <input
+                    type="email"
+                    value={clientForm.email||""}
+                    onChange={e=> setClientForm({...clientForm, email:e.target.value})}
+                    placeholder="billing@company.com"
+                    className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium">Phone (Optional)</label>
+                  <input
+                    value={clientForm.phone||""}
+                    onChange={e=> setClientForm({...clientForm, phone:e.target.value})}
+                    placeholder="+91 98765 43210"
+                    className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-medium">Billing Address (Optional)</label>
+                <input
+                  value={clientForm.address||""}
+                  onChange={e=> setClientForm({...clientForm, address:e.target.value})}
+                  placeholder="Street, City, Pin"
+                  className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-medium">State</label>
+                  <select
+                    value={clientForm.state}
+                    onChange={e=> setClientForm({...clientForm, state:e.target.value})}
+                    className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}
+                  >
+                    <option>27-Maharashtra</option>
+                    <option>29-Karnataka</option>
+                    <option>07-Delhi</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-medium">Credit Limit (₹)</label>
+                  <input
+                    type="number"
+                    value={clientForm.creditLimit||""}
+                    onChange={e=> setClientForm({...clientForm, creditLimit:Number(e.target.value)})}
+                    placeholder="0"
+                    className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCreateClient}
+                disabled={clientSubmitting}
+                className="w-full h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-medium text-[13px] hover:opacity-95 transition disabled:opacity-50"
+              >
+                {clientSubmitting ? "Saving Client..." : "Save Client"}
+              </button>
             </div>
           </div>
         </div>

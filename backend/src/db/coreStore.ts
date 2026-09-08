@@ -146,12 +146,27 @@ export interface CompanyTask {
   updated_at: string;
 }
 
+export interface DeveloperIssue {
+  id: string;
+  developer_id: string;
+  developer_name: string;
+  title: string;
+  description: string;
+  project_name: string;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  type: "BUG" | "FEATURE" | "IMPROVEMENT";
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED";
+  created_at: string;
+  updated_at: string;
+}
+
 interface CoreDataStore {
   users: ManagedUser[];
   auditLogs: AuditLogEntry[];
   sows: ScopeOfWork[];
   dailyUpdates: DailyDeveloperUpdate[];
   tasks: CompanyTask[];
+  developerIssues: DeveloperIssue[];
   activeTemplate: GlobalSowTemplate;
   templateHistory: GlobalSowTemplate[];
   companySettings: CompanySettings;
@@ -499,6 +514,7 @@ function emptyStore(): CoreDataStore {
     sows: [...seedSows],
     dailyUpdates: [...seedDailyUpdates],
     tasks: [...seedTasks],
+    developerIssues: [],
     activeTemplate: { ...defaultActiveTemplate },
     templateHistory: [],
     companySettings: { ...defaultCompanySettings }
@@ -515,6 +531,7 @@ async function readStore(): Promise<CoreDataStore> {
       sows: Array.isArray(data.sows) ? data.sows : [...seedSows],
       dailyUpdates: Array.isArray(data.dailyUpdates) ? data.dailyUpdates : [...seedDailyUpdates],
       tasks: Array.isArray(data.tasks) ? data.tasks : [...seedTasks],
+      developerIssues: Array.isArray(data.developerIssues) ? data.developerIssues : [],
       activeTemplate: data.activeTemplate && data.activeTemplate.template_content ? data.activeTemplate : { ...defaultActiveTemplate },
       templateHistory: Array.isArray(data.templateHistory) ? data.templateHistory : [],
       companySettings: data.companySettings && data.companySettings.company_name ? data.companySettings : { ...defaultCompanySettings }
@@ -1071,3 +1088,54 @@ export async function deleteCompanyTask(id: string): Promise<void> {
   store.tasks = store.tasks.filter(t => t.id !== id);
   await saveStore(store);
 }
+
+// ----------------- DEVELOPER ISSUES & BUGS -----------------
+export async function listDeveloperIssues(): Promise<DeveloperIssue[]> {
+  const store = await readStore();
+  return (store.developerIssues || []).slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+export async function createDeveloperIssue(input: {
+  developerId: string;
+  developerName: string;
+  title: string;
+  description: string;
+  projectName?: string;
+  priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  type?: "BUG" | "FEATURE" | "IMPROVEMENT";
+}): Promise<DeveloperIssue> {
+  const store = await readStore();
+  const now = new Date().toISOString();
+  const issue: DeveloperIssue = {
+    id: `iss-${randomUUID().slice(0, 8)}`,
+    developer_id: input.developerId,
+    developer_name: input.developerName,
+    title: input.title.trim(),
+    description: input.description.trim(),
+    project_name: input.projectName?.trim() || "General Engineering",
+    priority: input.priority || "MEDIUM",
+    type: input.type || "BUG",
+    status: "OPEN",
+    created_at: now,
+    updated_at: now,
+  };
+  if (!Array.isArray(store.developerIssues)) store.developerIssues = [];
+  store.developerIssues.unshift(issue);
+  await saveStore(store);
+  return issue;
+}
+
+export async function updateDeveloperIssueStatus(
+  id: string,
+  status: "OPEN" | "IN_PROGRESS" | "RESOLVED"
+): Promise<DeveloperIssue | null> {
+  const store = await readStore();
+  if (!Array.isArray(store.developerIssues)) store.developerIssues = [];
+  const issue = store.developerIssues.find((i) => i.id === id);
+  if (!issue) return null;
+  issue.status = status;
+  issue.updated_at = new Date().toISOString();
+  await saveStore(store);
+  return issue;
+}
+

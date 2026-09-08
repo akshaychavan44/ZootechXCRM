@@ -49,6 +49,9 @@ import {
   getSowTemplateHistory,
   listAuditLogs,
   listDailyUpdates,
+  listDeveloperIssues,
+  createDeveloperIssue,
+  updateDeveloperIssueStatus,
   listManagedUsers,
   listSows,
   listSowTemplates,
@@ -122,7 +125,7 @@ const leadStatus = z.enum(["NEW", "CONTACTED", "FOLLOW_UP", "INTERESTED", "QUOTA
 const leadUpdateInput = z.object({ fullName: z.string().min(2).optional(), company: z.string().max(160).nullable().optional(), email: z.string().email().nullable().optional(), phone: z.string().max(30).nullable().optional(), source: z.string().min(2).optional(), notes: z.string().nullable().optional(), status: leadStatus.optional() }).refine(data => Object.keys(data).length > 0, { message: "At least one lead field is required" });
 const followupInput = z.object({ leadId: z.string().optional(), leadName: z.string().min(2).max(160), company: z.string().max(160).optional(), property: z.string().max(300).optional(), type: z.string().min(2).max(40), date: z.string().date(), time: z.string().max(32).optional(), assignedTo: z.string().max(120).optional(), priority: z.string().max(20).optional(), status: z.string().max(30).optional(), notes: z.string().max(2000).optional() });
 const followupUpdateInput = z.object({ leadName: z.string().min(2).max(160).optional(), company: z.string().max(160).nullable().optional(), property: z.string().max(300).nullable().optional(), type: z.string().min(2).max(40).optional(), date: z.string().date().optional(), time: z.string().max(32).nullable().optional(), assignedTo: z.string().max(120).nullable().optional(), priority: z.string().max(20).nullable().optional(), status: z.string().max(30).optional(), notes: z.string().max(2000).nullable().optional(), completed: z.boolean().optional() }).refine(data => Object.keys(data).length > 0, { message: "At least one follow-up field is required" });
-const clientInput = z.object({ name: z.string().min(2), company: z.string().max(160).optional(), email: z.string().email().optional(), phone: z.string().min(5).max(30), gstNumber: z.string().max(30).optional() });
+const clientInput = z.object({ name: z.string().optional(), businessName: z.string().optional(), company: z.string().max(160).optional().nullable(), email: z.string().max(255).optional().nullable(), phone: z.string().max(30).optional().nullable(), gstNumber: z.string().max(30).optional().nullable(), gstin: z.string().max(30).optional().nullable() });
 const quotationInput = z.object({ clientId: z.string().uuid().optional(), clientName: z.string().min(2).max(160), amount: z.number().positive(), validUntil: z.string().date(), status: z.enum(["Draft", "Sent", "Accepted"]).default("Draft") });
 const invoiceInput = z.object({ invoiceNumber: z.string().min(3).max(32), clientId: z.string().min(1), clientName: z.string().min(1).max(160).optional(), total: z.number().positive(), paidAmount: z.number().min(0).optional(), dueDate: z.string().datetime() });
 const expenseInput = z.object({ title: z.string().min(2).max(160), category: z.string().min(2).max(80), amount: z.number().positive(), expenseDate: z.string().date().optional(), paymentMethod: z.string().min(2).max(40).optional(), description: z.string().max(2000).optional() });
@@ -561,7 +564,7 @@ app.post("/api/followups", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES
     response.status(201).json({ data: followup, fallback: true });
   }
 });
-app.patch("/api/followups/:id", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES"), async (request, response) => {
+app.patch("/api/followups/:id", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES"), async (request: AuthRequest, response) => {
   const parsed = followupUpdateInput.safeParse(request.body);
   if (!parsed.success) { response.status(400).json({ message:"Invalid follow-up update", errors:parsed.error.flatten() }); return; }
   const data = parsed.data;
@@ -569,6 +572,7 @@ app.patch("/api/followups/:id", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "
     const markCompleted = data.completed === true || data.status === "Completed";
     const rows = await withDbTimeout(sql`UPDATE followups SET lead_name = COALESCE(${data.leadName ?? null}, lead_name), company = CASE WHEN ${data.company !== undefined} THEN ${data.company ?? null} ELSE company END, property = CASE WHEN ${data.property !== undefined} THEN ${data.property ?? null} ELSE property END, type = COALESCE(${data.type ?? null}, type), followup_date = COALESCE(${data.date ?? null}, followup_date), followup_time = CASE WHEN ${data.time !== undefined} THEN ${data.time ?? null} ELSE followup_time END, assigned_to = CASE WHEN ${data.assignedTo !== undefined} THEN ${data.assignedTo ?? null} ELSE assigned_to END, priority = CASE WHEN ${data.priority !== undefined} THEN ${data.priority ?? null} ELSE priority END, status = CASE WHEN ${markCompleted} THEN 'Completed' WHEN ${data.status ?? null} IS NOT NULL THEN ${data.status ?? null} ELSE status END, notes = CASE WHEN ${data.notes !== undefined} THEN ${data.notes ?? null} ELSE notes END, completed_at = CASE WHEN ${markCompleted} THEN COALESCE(completed_at, now()) WHEN ${data.completed === false} THEN NULL ELSE completed_at END, updated_at = now() WHERE id = ${String(request.params.id)} RETURNING *`, 1200);
     if (!rows[0]) { response.status(404).json({ message:"Follow-up not found" }); return; }
+    recordNotification("Follow-up Updated", `Follow-up with ${rows[0].lead_name || "lead"} marked as ${rows[0].status}`, request.user!.id);
     response.json({ data:rows[0] });
   } catch {
     const markCompleted = data.completed === true || data.status === "Completed";
@@ -585,6 +589,7 @@ app.patch("/api/followups/:id", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "
       ...(data.notes !== undefined ? { notes: data.notes } : {}),
     });
     if (!updated) { response.status(404).json({ message:"Follow-up not found" }); return; }
+    recordNotification("Follow-up Updated", `Follow-up with ${updated.lead_name || "lead"} marked as ${updated.status}`, request.user!.id);
     response.json({ data: updated, fallback: true });
   }
 });
@@ -615,28 +620,146 @@ app.delete("/api/followups/:id", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", 
 app.get("/api/clients", requireAuth, async (_request, response) => {
   try {
     const rows = await withDbTimeout(sql`SELECT * FROM clients ORDER BY created_at DESC`, 1200);
-    response.json({ data: rows });
+    const mktClients = await listMarketingClients().catch(() => []);
+    const mktProjects = await listMarketingClientProjects().catch(() => []);
+    const deliveryProjects = await listFallbackProjects({ id: "", role: "SUPER_ADMIN" }).catch(() => []);
+
+    const clientsMap = new Map<string, any>();
+    for (const r of rows) {
+      clientsMap.set(r.id, { ...r });
+    }
+    for (const mc of mktClients) {
+      if (!clientsMap.has(mc.id)) {
+        clientsMap.set(mc.id, {
+          id: mc.id,
+          name: mc.contact_name || mc.name,
+          company: mc.name,
+          businessName: mc.name,
+          email: mc.contact_email || null,
+          phone: "N/A",
+          gst_number: null,
+          created_at: mc.created_at,
+        });
+      }
+    }
+
+    const allClients = Array.from(clientsMap.values()).map((client) => {
+      const clientNameLower = (client.company || client.name || "").toLowerCase();
+      const associatedMkt = mktProjects
+        .filter((p) => p.client_id === client.id || (p.client_name && p.client_name.toLowerCase() === clientNameLower))
+        .map((p) => ({
+          id: p.id,
+          name: p.title,
+          title: p.title,
+          status: p.status,
+          category: p.category,
+          budget: p.budget,
+          deadline: p.deadline,
+        }));
+      const associatedDeliv = deliveryProjects
+        .filter((p) => p.client_name && p.client_name.toLowerCase() === clientNameLower)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          title: p.name,
+          status: p.status,
+          category: "Delivery",
+          budget: 0,
+          deadline: p.due_date,
+        }));
+      return {
+        ...client,
+        projects: [...associatedMkt, ...associatedDeliv],
+      };
+    });
+
+    response.json({ data: allClients });
   } catch {
-    response.json({ data: await listFallbackClients(), fallback: true });
+    const fallbackCrm = await listFallbackClients().catch(() => []);
+    const mktClients = await listMarketingClients().catch(() => []);
+    const mktProjects = await listMarketingClientProjects().catch(() => []);
+    const deliveryProjects = await listFallbackProjects({ id: "", role: "SUPER_ADMIN" }).catch(() => []);
+
+    const clientsMap = new Map<string, any>();
+    for (const r of fallbackCrm) {
+      clientsMap.set(r.id, { ...r });
+    }
+    for (const mc of mktClients) {
+      if (!clientsMap.has(mc.id)) {
+        clientsMap.set(mc.id, {
+          id: mc.id,
+          name: mc.contact_name || mc.name,
+          company: mc.name,
+          businessName: mc.name,
+          email: mc.contact_email || null,
+          phone: "N/A",
+          gst_number: null,
+          created_at: mc.created_at,
+        });
+      }
+    }
+
+    const allClients = Array.from(clientsMap.values()).map((client) => {
+      const clientNameLower = (client.company || client.name || "").toLowerCase();
+      const associatedMkt = mktProjects
+        .filter((p) => p.client_id === client.id || (p.client_name && p.client_name.toLowerCase() === clientNameLower))
+        .map((p) => ({
+          id: p.id,
+          name: p.title,
+          title: p.title,
+          status: p.status,
+          category: p.category,
+          budget: p.budget,
+          deadline: p.deadline,
+        }));
+      const associatedDeliv = deliveryProjects
+        .filter((p) => p.client_name && p.client_name.toLowerCase() === clientNameLower)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          title: p.name,
+          status: p.status,
+          category: "Delivery",
+          budget: 0,
+          deadline: p.due_date,
+        }));
+      return {
+        ...client,
+        projects: [...associatedMkt, ...associatedDeliv],
+      };
+    });
+
+    response.json({ data: allClients, fallback: true });
   }
 });
 app.post("/api/clients", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES"), async (request: AuthRequest, response) => {
-  const parsed = clientInput.safeParse(request.body);
-  if (!parsed.success) { response.status(400).json({ message: "Invalid client", errors: parsed.error.flatten() }); return; }
-  const data = parsed.data;
+  const body = request.body || {};
+  const rawName = String(body.name || body.businessName || body.company || "").trim();
+  const rawCompany = String(body.company || body.businessName || rawName).trim() || null;
+  const rawEmail = typeof body.email === "string" && body.email.trim() ? body.email.trim() : null;
+  const rawPhone = typeof body.phone === "string" && body.phone.trim() ? body.phone.trim() : "N/A";
+  const rawGst = typeof (body.gstNumber || body.gstin || body.gst_number) === "string" && (body.gstNumber || body.gstin || body.gst_number).trim()
+    ? (body.gstNumber || body.gstin || body.gst_number).trim()
+    : null;
+
+  if (!rawName) {
+    response.status(400).json({ message: "Client name or business name is required" });
+    return;
+  }
+
   try {
-    const rows = await withDbTimeout(sql`INSERT INTO clients (name, company, email, phone, gst_number) VALUES (${data.name}, ${data.company ?? null}, ${data.email ?? null}, ${data.phone}, ${data.gstNumber ?? null}) RETURNING *`, 1200);
-    recordNotification("Client Onboarded", `${data.name}${data.company ? ` (${data.company})` : ""} was added to CRM`, request.user!.id);
+    const rows = await withDbTimeout(sql`INSERT INTO clients (name, company, email, phone, gst_number) VALUES (${rawName}, ${rawCompany}, ${rawEmail}, ${rawPhone}, ${rawGst}) RETURNING *`, 1200);
+    recordNotification("Client Onboarded", `${rawName}${rawCompany && rawCompany !== rawName ? ` (${rawCompany})` : ""} was added to CRM`, request.user!.id);
     response.status(201).json({ data: rows[0] });
   } catch {
     const client = await addFallbackClient({
-      name: data.name,
-      company: data.company ?? null,
-      email: data.email ?? null,
-      phone: data.phone,
-      gst_number: data.gstNumber ?? null,
+      name: rawName,
+      company: rawCompany,
+      email: rawEmail,
+      phone: rawPhone,
+      gst_number: rawGst,
     });
-    recordNotification("Client Onboarded", `${data.name}${data.company ? ` (${data.company})` : ""} was added to CRM`, request.user!.id);
+    recordNotification("Client Onboarded", `${rawName}${rawCompany && rawCompany !== rawName ? ` (${rawCompany})` : ""} was added to CRM`, request.user!.id);
     response.status(201).json({ data: client, fallback: true });
   }
 });
@@ -861,14 +984,32 @@ app.delete("/api/developers/:id", requireAuth, allow("SUPER_ADMIN"), async (requ
     }
   }
 });
-app.get("/api/projects", requireAuth, allow("SUPER_ADMIN", "DEVELOPER"), async (request: AuthRequest, response) => {
+app.get("/api/projects", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES", "DEVELOPER"), async (request: AuthRequest, response) => {
+  const mktProjects = await listMarketingClientProjects().catch(() => []);
+  const mappedMktProjects = request.user!.role === "DEVELOPER"
+    ? []
+    : mktProjects.map((p) => ({
+        id: p.id,
+        name: p.title,
+        client_name: p.client_name,
+        description: p.deliverables || p.category || "Marketing growth project",
+        status: p.status,
+        priority: "MEDIUM",
+        due_date: p.deadline || null,
+        assigned_developer_id: "marketing-lead",
+        developer_name: "Growth & Marketing Team",
+        progress: p.status === "COMPLETED" ? 100 : p.status === "ACTIVE" ? 75 : p.status === "IN_PROGRESS" ? 50 : 25,
+        created_at: p.created_at,
+        updated_at: p.created_at,
+      }));
   try {
     const rows = request.user!.role === "DEVELOPER"
       ? await withDbTimeout(sql`SELECT projects.*, users.name AS developer_name, COALESCE(latest_update.progress, CASE WHEN projects.status = 'COMPLETED' THEN 100 ELSE 0 END) AS progress FROM projects JOIN users ON users.id = projects.assigned_developer_id LEFT JOIN LATERAL (SELECT progress FROM project_updates WHERE project_id = projects.id ORDER BY created_at DESC LIMIT 1) latest_update ON true WHERE projects.assigned_developer_id = ${request.user!.id} ORDER BY projects.updated_at DESC`, 1200)
       : await withDbTimeout(sql`SELECT projects.*, users.name AS developer_name, COALESCE(latest_update.progress, CASE WHEN projects.status = 'COMPLETED' THEN 100 ELSE 0 END) AS progress FROM projects JOIN users ON users.id = projects.assigned_developer_id LEFT JOIN LATERAL (SELECT progress FROM project_updates WHERE project_id = projects.id ORDER BY created_at DESC LIMIT 1) latest_update ON true ORDER BY projects.updated_at DESC`, 1200);
-    response.json({ data: rows });
+    response.json({ data: [...rows, ...mappedMktProjects] });
   } catch {
-    response.json({ data: await listFallbackProjects(request.user!), fallback: true });
+    const fallbackProjects = await listFallbackProjects(request.user!);
+    response.json({ data: [...fallbackProjects, ...mappedMktProjects], fallback: true });
   }
 });
 app.post("/api/projects", requireAuth, allow("SUPER_ADMIN"), async (request: AuthRequest, response) => {
@@ -885,16 +1026,20 @@ app.post("/api/projects", requireAuth, allow("SUPER_ADMIN"), async (request: Aut
     response.status(201).json({ data: project, fallback: true });
   }
 });
-app.patch("/api/projects/:id/status", requireAuth, allow("SUPER_ADMIN", "DEVELOPER"), async (request: AuthRequest, response) => {
+app.patch("/api/projects/:id/status", requireAuth, allow("DEVELOPER"), async (request: AuthRequest, response) => {
   const parsed = projectStatusInput.safeParse(request.body);
   if (!parsed.success) { response.status(400).json({ message: "Invalid project status" }); return; }
   const projectId = String(request.params.id);
   try {
-    const rows = await withDbTimeout(sql`UPDATE projects SET status = ${parsed.data.status}, progress_percentage = CASE WHEN ${parsed.data.status} = 'COMPLETED' THEN 100 ELSE progress_percentage END, updated_at = now() WHERE id = ${projectId} AND (${request.user!.role} = 'SUPER_ADMIN' OR assigned_developer_id = ${request.user!.id}) RETURNING *`, 1200);
-    if (!rows[0]) { response.status(403).json({ message: "You cannot update this project" }); return; }
+    const rows = await withDbTimeout(sql`UPDATE projects SET status = ${parsed.data.status}, progress_percentage = CASE WHEN ${parsed.data.status} = 'COMPLETED' THEN 100 ELSE progress_percentage END, updated_at = now() WHERE id = ${projectId} AND assigned_developer_id = ${request.user!.id} RETURNING *`, 1200);
+    if (!rows[0]) { response.status(403).json({ message: "Only the assigned developer can update this project status" }); return; }
     response.json({ data: rows[0] });
   } catch {
     try {
+      const fbProject = await fallbackProject(projectId);
+      if (!fbProject || fbProject.assigned_developer_id !== request.user!.id) {
+        response.status(403).json({ message: "Only the assigned developer can update this project status" }); return;
+      }
       const updated = await setFallbackProjectStatus(projectId, parsed.data.status);
       response.json({ data: updated, fallback: true });
     } catch {
@@ -919,15 +1064,15 @@ app.get("/api/projects/:id/updates", requireAuth, allow("SUPER_ADMIN", "DEVELOPE
     response.json({ data: await listFallbackUpdates(projectId), fallback: true });
   }
 });
-app.post("/api/projects/:id/updates", requireAuth, allow("SUPER_ADMIN", "DEVELOPER"), async (request: AuthRequest, response) => {
+app.post("/api/projects/:id/updates", requireAuth, allow("DEVELOPER"), async (request: AuthRequest, response) => {
   const parsed = projectUpdateInput.safeParse(request.body);
   if (!parsed.success) { response.status(400).json({ message: "Invalid project update", errors: parsed.error.flatten() }); return; }
   const data = parsed.data;
   const projectId = String(request.params.id);
   try {
     const project = await withDbTimeout(sql`SELECT id, assigned_developer_id, status, progress_percentage FROM projects WHERE id = ${projectId} LIMIT 1`, 800);
-    if (!project[0] || (request.user!.role === "DEVELOPER" && project[0].assigned_developer_id !== request.user!.id)) {
-      response.status(403).json({ message: "You cannot update this project" }); return;
+    if (!project[0] || project[0].assigned_developer_id !== request.user!.id) {
+      response.status(403).json({ message: "Only the assigned developer can post updates to this project" }); return;
     }
     const nextStatus = data.status ?? (data.progress === 100 ? "COMPLETED" : data.progress > 0 ? "IN_PROGRESS" : project[0].status);
     if (nextStatus === "COMPLETED" && data.progress < 100) {
@@ -940,6 +1085,10 @@ app.post("/api/projects/:id/updates", requireAuth, allow("SUPER_ADMIN", "DEVELOP
     response.status(201).json({ data: rows[0], project:{ id:projectId, status:nextStatus, progress:nextProgress } });
   } catch {
     try {
+      const fbProject = await fallbackProject(projectId);
+      if (!fbProject || fbProject.assigned_developer_id !== request.user!.id) {
+        response.status(403).json({ message: "Only the assigned developer can post updates to this project" }); return;
+      }
       const update = await addFallbackUpdate(projectId, request.user!.id, data.message, data.progress);
       const nextStatus = data.status ?? (data.progress === 100 ? "COMPLETED" : data.progress > 0 ? "IN_PROGRESS" : "PENDING");
       recordNotification("Project Update", `Project update: ${data.message.slice(0, 35)} (${data.progress}% done)`, request.user!.id);
@@ -982,7 +1131,7 @@ app.delete("/api/vault/:id", requireAuth, async (request: AuthRequest, response)
   try { const rows = await withDbTimeout(sql`DELETE FROM credential_vault_items WHERE id = ${String(request.params.id)} AND owner_id = ${request.user!.id} RETURNING id`, 1200); if (!rows[0]) { response.status(404).json({ message:"Vault item not found." }); return; } response.status(204).send(); }
   catch { response.status(503).json({ message:"Unable to remove this credential." }); }
 });
-app.get("/api/marketing/overview", requireAuth, allow("SUPER_ADMIN", "DIGITAL_MARKETING"), async (_request, response) => {
+app.get("/api/marketing/overview", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES", "DIGITAL_MARKETING"), async (_request, response) => {
   try {
     const overview = await getMarketingOverview();
     response.json({ data: overview });
@@ -990,7 +1139,7 @@ app.get("/api/marketing/overview", requireAuth, allow("SUPER_ADMIN", "DIGITAL_MA
     response.status(500).json({ message: "Unable to load marketing overview" });
   }
 });
-app.get("/api/marketing/campaigns", requireAuth, allow("SUPER_ADMIN", "DIGITAL_MARKETING"), async (request, response) => {
+app.get("/api/marketing/campaigns", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES", "DIGITAL_MARKETING"), async (request, response) => {
   try {
     const platform = typeof request.query.platform === "string" ? request.query.platform : undefined;
     const status = typeof request.query.status === "string" ? request.query.status : undefined;
@@ -1031,7 +1180,7 @@ app.delete("/api/marketing/campaigns/:id", requireAuth, allow("SUPER_ADMIN", "DI
     response.status(404).json({ message: "Campaign not found" });
   }
 });
-app.get("/api/marketing/creatives", requireAuth, allow("SUPER_ADMIN", "DIGITAL_MARKETING"), async (_request, response) => {
+app.get("/api/marketing/creatives", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES", "DIGITAL_MARKETING"), async (_request, response) => {
   try {
     const creatives = await listMarketingCreatives();
     response.json({ data: creatives });
@@ -1052,7 +1201,7 @@ app.post("/api/marketing/creatives", requireAuth, allow("SUPER_ADMIN", "DIGITAL_
     response.status(500).json({ message: "Unable to create creative" });
   }
 });
-app.get("/api/marketing/leads", requireAuth, allow("SUPER_ADMIN", "DIGITAL_MARKETING"), async (_request, response) => {
+app.get("/api/marketing/leads", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES", "DIGITAL_MARKETING"), async (_request, response) => {
   try {
     const leads = await listMarketingLeads();
     response.json({ data: leads });
@@ -1192,7 +1341,7 @@ const marketingClientAssetInput = z.object({
 });
 
 // Overview
-app.get("/api/marketing/clients/overview", requireAuth, allow("SUPER_ADMIN", "DIGITAL_MARKETING"), async (_request, response) => {
+app.get("/api/marketing/clients/overview", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES", "DIGITAL_MARKETING"), async (_request, response) => {
   try {
     const overview = await getMarketingClientsOverview();
     response.json({ data: overview });
@@ -1202,7 +1351,7 @@ app.get("/api/marketing/clients/overview", requireAuth, allow("SUPER_ADMIN", "DI
 });
 
 // Clients
-app.get("/api/marketing/clients", requireAuth, allow("SUPER_ADMIN", "DIGITAL_MARKETING"), async (_request, response) => {
+app.get("/api/marketing/clients", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES", "DIGITAL_MARKETING"), async (_request, response) => {
   try {
     const clients = await listMarketingClients();
     response.json({ data: clients });
@@ -1247,7 +1396,7 @@ app.delete("/api/marketing/clients/:id", requireAuth, allow("SUPER_ADMIN", "DIGI
 });
 
 // Projects
-app.get("/api/marketing/projects", requireAuth, allow("SUPER_ADMIN", "DIGITAL_MARKETING"), async (request, response) => {
+app.get("/api/marketing/projects", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES", "DIGITAL_MARKETING"), async (request, response) => {
   try {
     const clientId = typeof request.query.clientId === "string" ? request.query.clientId : undefined;
     const projects = await listMarketingClientProjects(clientId);
@@ -1290,7 +1439,7 @@ app.delete("/api/marketing/projects/:id", requireAuth, allow("SUPER_ADMIN", "DIG
 });
 
 // Assets
-app.get("/api/marketing/assets", requireAuth, allow("SUPER_ADMIN", "DIGITAL_MARKETING"), async (request, response) => {
+app.get("/api/marketing/assets", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES", "DIGITAL_MARKETING"), async (request, response) => {
   try {
     const clientId = typeof request.query.clientId === "string" ? request.query.clientId : undefined;
     const projectId = typeof request.query.projectId === "string" ? request.query.projectId : undefined;
@@ -1553,6 +1702,73 @@ app.post("/api/daily-updates", requireAuth, allow("SUPER_ADMIN", "DEVELOPER"), a
   }
 });
 
+// ==================== DEVELOPER ISSUES & BUGS ====================
+const developerIssueInput = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  projectName: z.string().optional(),
+  project_name: z.string().optional(),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional().default("MEDIUM"),
+  type: z.enum(["BUG", "FEATURE", "IMPROVEMENT"]).optional().default("BUG"),
+});
+
+app.get("/api/developer-issues", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "DEVELOPER"), async (request: AuthRequest, response) => {
+  try {
+    const issues = await listDeveloperIssues();
+    response.json({ data: issues });
+  } catch (error) {
+    response.status(500).json({ message: "Unable to load developer issues" });
+  }
+});
+
+app.post("/api/developer-issues", requireAuth, allow("DEVELOPER"), async (request: AuthRequest, response) => {
+  const parsed = developerIssueInput.safeParse(request.body);
+  if (!parsed.success) {
+    response.status(400).json({ message: "Invalid issue data", errors: parsed.error.flatten() });
+    return;
+  }
+  try {
+    const devName = (await findManagedUserById(request.user!.id))?.name
+      || findDemoUser(request.user!.id)?.name
+      || (await findFallbackDeveloper(request.user!.id))?.name
+      || "Lead Developer";
+
+    const issue = await createDeveloperIssue({
+      developerId: request.user!.id,
+      developerName: devName,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      projectName: parsed.data.projectName || parsed.data.project_name,
+      priority: parsed.data.priority,
+      type: parsed.data.type,
+    });
+    await recordAuditLog("DEVELOPER_ISSUE", "DEVELOPER", issue.id, `${devName} reported ${parsed.data.type}: ${parsed.data.title}`, request.user!.id, devName);
+    recordNotification("Bug Reported", `${devName} logged ${parsed.data.type}: ${parsed.data.title.slice(0, 30)}`, request.user!.id);
+    response.status(201).json({ data: issue, message: "Issue reported successfully" });
+  } catch (error) {
+    response.status(500).json({ message: error instanceof Error ? error.message : "Unable to report issue" });
+  }
+});
+
+app.patch("/api/developer-issues/:id/status", requireAuth, allow("DEVELOPER"), async (request: AuthRequest, response) => {
+  const statusParsed = z.enum(["OPEN", "IN_PROGRESS", "RESOLVED"]).safeParse(request.body?.status);
+  if (!statusParsed.success) {
+    response.status(400).json({ message: "Invalid status value" });
+    return;
+  }
+  try {
+    const issueId = String(request.params.id);
+    const issue = await updateDeveloperIssueStatus(issueId, statusParsed.data);
+    if (!issue) {
+      response.status(404).json({ message: "Issue not found" });
+      return;
+    }
+    response.json({ data: issue });
+  } catch (error) {
+    response.status(500).json({ message: "Unable to update issue status" });
+  }
+});
+
 // ==================== UNIVERSAL TASKS ====================
 const taskInput = z.object({
   title: z.string().min(2).max(180),
@@ -1575,7 +1791,9 @@ const taskInput = z.object({
 
 app.get("/api/tasks", requireAuth, async (request: AuthRequest, response) => {
   try {
-    const assignedToId = request.user!.role === "DEVELOPER" ? request.user!.id : undefined;
+    const assignedToId = (request.user!.role === "DEVELOPER" || request.user!.role === "SALES")
+      ? request.user!.id
+      : undefined;
     const tasks = await listTasks({ assignedToId });
     response.json({ data: tasks });
   } catch {
@@ -1583,7 +1801,7 @@ app.get("/api/tasks", requireAuth, async (request: AuthRequest, response) => {
   }
 });
 
-app.post("/api/tasks", requireAuth, async (request: AuthRequest, response) => {
+app.post("/api/tasks", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN"), async (request: AuthRequest, response) => {
   const parsed = taskInput.safeParse(request.body);
   if (!parsed.success) {
     response.status(400).json({ message: "Invalid task input", errors: parsed.error.flatten() });
@@ -1614,6 +1832,27 @@ app.post("/api/tasks", requireAuth, async (request: AuthRequest, response) => {
 app.patch("/api/tasks/:id", requireAuth, async (request: AuthRequest, response) => {
   const taskId = String(request.params.id);
   try {
+    const tasks = await listTasks();
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) {
+      return response.status(404).json({ message: "Task not found" });
+    }
+
+    // Super Admin / Sub Admin cannot update if the task is completed or start.
+    // Tasks can only be updated by the particular employee account to whom the task was assigned.
+    if (request.user!.role === "SUPER_ADMIN" || request.user!.role === "SUB_ADMIN") {
+      return response.status(403).json({
+        message: "Super Admin can only monitor tasks. Only the assigned employee can update task progress.",
+      });
+    }
+
+    const isAssignee = task.assigned_to_id === request.user!.id;
+    if (!isAssignee) {
+      return response.status(403).json({
+        message: "Only the assigned employee can update this task.",
+      });
+    }
+
     const updated = await updateCompanyTask(taskId, request.body);
     response.json({ data: updated, message: "Task updated successfully" });
   } catch (error) {
@@ -1621,7 +1860,7 @@ app.patch("/api/tasks/:id", requireAuth, async (request: AuthRequest, response) 
   }
 });
 
-app.delete("/api/tasks/:id", requireAuth, async (request, response) => {
+app.delete("/api/tasks/:id", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN"), async (request, response) => {
   const taskId = String(request.params.id);
   try {
     await deleteCompanyTask(taskId);

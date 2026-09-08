@@ -3,13 +3,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, CreditCard, Calculator, Users,
   BellRing, Briefcase, KeyRound, Plus, RefreshCw,
-  Search, ShieldCheck, Sun, Moon, LogOut, CheckCircle2, AlertCircle, X
+  Search, ShieldCheck, Sun, Moon, LogOut, CheckCircle2, AlertCircle, X, Megaphone
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import DeveloperWorkspace from "./DeveloperWorkspace";
 import CredentialsVault from "./CredentialsVault";
 import ScopeOfWorkWorkspace from "./ScopeOfWorkWorkspace";
 import UniversalTasksWorkspace from "./UniversalTasksWorkspace";
+import DigitalMarketingWorkspace from "./DigitalMarketingWorkspace";
 
 interface SubAdminDashboardProps {
   onLogout: () => void;
@@ -17,7 +18,14 @@ interface SubAdminDashboardProps {
   onToggleTheme?: () => void;
 }
 
-type Client = { id: string; name: string; company: string | null; phone: string | null; email?: string | null };
+type Client = {
+  id: string;
+  name: string;
+  company: string | null;
+  phone: string | null;
+  email?: string | null;
+  projects?: Array<{ id: string; title: string; name: string; status: string; category?: string; budget?: number; deadline?: string }>;
+};
 type Invoice = { id: string; invoice_number: string; total: string | number; paid_amount: string | number; client_name: string; due_date?: string };
 type Expense = { id: string; title: string; category: string; amount: string | number; expense_date?: string; payment_method?: string };
 type Payment = { id: string; invoice_number: string; amount: string | number; method: string };
@@ -135,7 +143,26 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
 
   useEffect(() => {
     void load();
+    const interval = window.setInterval(() => void load(), 12000);
+    return () => window.clearInterval(interval);
   }, []);
+
+  const handleUpdateFollowupStatus = async (followupId: string, newStatus: string) => {
+    setFollowups((prev) =>
+      prev.map((f) => (f.id === followupId ? { ...f, status: newStatus } : f))
+    );
+    try {
+      const res = await apiFetch(`/api/followups/${followupId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      setNotice(`Follow-up status updated to ${newStatus}`);
+    } catch {
+      setNotice("Failed to update status");
+      void load();
+    }
+  };
 
   const saveRecord = async (path: string, body: unknown, onSuccess: () => void) => {
     setSaving(true);
@@ -170,11 +197,11 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
   const mutedText = dark ? "text-[#8e9bb0]" : "text-[#78716c]";
 
   if (page === "developers") {
-    return <DeveloperWorkspace admin dark={dark} onBack={() => setPage("invoices")} onToggleTheme={handleToggleTheme} />;
+    return <DeveloperWorkspace admin subAdmin dark={dark} onBack={() => setPage("invoices")} onToggleTheme={handleToggleTheme} />;
   }
 
   type SubAdminNavLink = {
-    id: "invoices" | "sows" | "tasks" | "expenses" | "leads" | "clients" | "developers" | "vault";
+    id: "invoices" | "sows" | "tasks" | "expenses" | "leads" | "clients" | "developers";
     label: string;
     icon: React.ComponentType<any>;
     badge?: number;
@@ -188,7 +215,6 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
     { id: "leads", label: "Shared Leads & Follow-ups", icon: Users, badge: leads.length },
     { id: "clients", label: "Client Directory", icon: Briefcase, badge: clients.length },
     { id: "developers", label: "Developers & Projects", icon: Briefcase },
-    { id: "vault", label: "Credentials Vault", icon: KeyRound },
   ];
 
   return (
@@ -248,16 +274,6 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
         {/* Footer actions */}
         <div className="p-4 border-t border-inherit space-y-2">
           <button
-            onClick={handleToggleTheme}
-            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition ${
-              dark ? "bg-white/5 text-slate-300 hover:bg-white/10" : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
-          >
-            {dark ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-indigo-600" />}
-            <span>{dark ? "Light Mode" : "Dark Mode"}</span>
-          </button>
-
-          <button
             onClick={onLogout}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"
           >
@@ -285,8 +301,6 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
                 ? "Leads & Follow-ups"
                 : page === "clients"
                 ? "Clients Directory"
-                : page === "vault"
-                ? "Credentials & Secret Vault"
                 : "Developers & Projects"}
             </h2>
             <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 text-[10px] font-bold text-indigo-400">
@@ -515,9 +529,33 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
                             {f.type} • {f.followup_date}
                           </div>
                         </div>
-                        <span className="rounded-full bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 text-[10px] font-bold text-amber-400">
-                          {f.status}
-                        </span>
+                        <select
+                          value={f.status}
+                          onChange={(e) => void handleUpdateFollowupStatus(f.id, e.target.value)}
+                          className={`h-7 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border cursor-pointer outline-none transition ${
+                            f.status === "Completed"
+                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                              : f.status === "Converted"
+                              ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30"
+                              : f.status === "Contacted"
+                              ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30"
+                              : f.status === "Overdue"
+                              ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                              : f.status === "Rescheduled"
+                              ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30"
+                              : f.status === "Cancelled"
+                              ? "bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30"
+                              : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                          }`}
+                        >
+                          <option value="Scheduled" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Scheduled</option>
+                          <option value="Contacted" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Contacted</option>
+                          <option value="Completed" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Completed</option>
+                          <option value="Converted" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Converted</option>
+                          <option value="Rescheduled" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Rescheduled</option>
+                          <option value="Cancelled" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Cancelled</option>
+                          <option value="Overdue" className={dark ? "bg-[#121826] text-white" : "bg-white text-black"}>Overdue</option>
+                        </select>
                       </div>
                     ))}
                   </div>
@@ -549,20 +587,34 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
                     <div className={`font-bold text-sm ${dark ? "text-white" : "text-slate-900"}`}>{c.company || c.name}</div>
                     <div className={`text-xs mt-0.5 ${mutedText}`}>{c.name}</div>
                     <div className={`mt-3 text-xs ${mutedText}`}>Phone: {c.phone || "—"}</div>
+                    {c.projects && c.projects.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-inherit">
+                        <div className={`text-[10px] font-semibold uppercase tracking-wider ${mutedText} mb-1.5`}>
+                          Active Projects ({c.projects.length})
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {c.projects.map((p) => (
+                            <span
+                              key={p.id}
+                              className={`px-2 py-0.5 rounded-lg text-[10px] font-medium ${
+                                dark
+                                  ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/25"
+                                  : "bg-amber-50 text-amber-800 border border-amber-200"
+                              }`}
+                            >
+                              {p.title || p.name} • <span className="font-bold">{p.status}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* TAB 6: CREDENTIALS VAULT */}
-          {page === "vault" && (
-            <div className="max-w-[1600px] mx-auto w-full">
-              <CredentialsVault dark={dark} />
-            </div>
-          )}
-
-          {/* TAB 7: SCOPE OF WORK */}
+          {/* TAB 6: SCOPE OF WORK */}
           {page === "sows" && (
             <div className="max-w-[1600px] mx-auto w-full">
               <ScopeOfWorkWorkspace dark={dark} />
@@ -572,7 +624,7 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
           {/* TAB 8: COMPANY TASKS */}
           {page === "tasks" && (
             <div className="max-w-[1600px] mx-auto w-full">
-              <UniversalTasksWorkspace dark={dark} />
+              <UniversalTasksWorkspace dark={dark} canCreate={true} canUpdateStatus={false} />
             </div>
           )}
         </main>
