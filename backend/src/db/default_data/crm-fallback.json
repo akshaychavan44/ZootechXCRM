@@ -1,0 +1,72 @@
+{
+  "leads": [
+    {
+      "full_name": "Akshay Chavan",
+      "company": "AA",
+      "email": "akshaychavan44.ac@gmail.com",
+      "phone": "7304763996",
+      "source": "Website",
+      "notes": "Notes",
+      "assigned_to_id": "00000000-0000-4000-8000-000000000001",
+      "id": "8364a6d6-3158-4814-8f25-efe63b40c4dc",
+      "status": "CONTACTED",
+      "created_at": "2026-09-08T08:20:35.229Z"
+    }
+  ],
+  "followups": [
+    {
+      "lead_id": "8364a6d6-3158-4814-8f25-efe63b40c4dc",
+      "lead_name": "Akshay Chavan",
+      "company": "AA",
+      "property": "Commercial - Tardeo",
+      "type": "WhatsApp",
+      "followup_date": "2026-09-18",
+      "followup_time": "6:30 AM",
+      "assigned_to": "Priya",
+      "priority": "Medium",
+      "status": "Rescheduled",
+      "notes": "Follow up for Akshay Chavan",
+      "id": "001626fb-2a6b-4800-b33b-0ae8df18588e",
+      "created_at": "2026-09-08T08:20:36.131Z"
+    }
+  ],
+  "clients": [
+    {
+      "name": "Ali",
+      "company": "Alibaba",
+      "email": "ali@gmail.com",
+      "phone": "N/A",
+      "gst_number": "989",
+      "id": "b4ba92a2-8f73-4811-aa38-9f9fe3e268e1",
+      "created_at": "2026-09-08T08:05:46.954Z"
+    }
+  ],
+  "invoices": [
+    {
+      "invoice_number": "INV-2026-001",
+      "client_id": "b4ba92a2-8f73-4811-aa38-9f9fe3e268e1",
+      "client_name": "Alibaba",
+      "total": 5900,
+      "paid_amount": 0,
+      "due_date": "2026-10-08T00:00:00.000Z",
+      "created_by_id": "00000000-0000-4000-8000-000000000001",
+      "created_by_name": "ZootechX Super Admin",
+      "id": "a25795b3-bd12-4841-b7fa-74b7b4d3e668",
+      "created_at": "2026-09-08T08:21:18.770Z"
+    }
+  ],
+  "expenses": [],
+  "payments": [],
+  "quotations": [
+    {
+      "quotation_number": "Q-1788855706383-FN23A",
+      "client_id": "b4ba92a2-8f73-4811-aa38-9f9fe3e268e1",
+      "client_name": "Alibaba",
+      "amount": 5000,
+      "valid_until": "2026-09-25",
+      "status": "Draft",
+      "id": "5fab9d1d-c2e9-4c47-a8f2-a4b34414dc5c",
+      "created_at": "2026-09-08T08:21:46.427Z"
+    }
+  ]
+}

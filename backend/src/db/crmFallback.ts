@@ -20,7 +20,9 @@ type Store = {
   quotations: LocalQuotation[];
 };
 
-const runtimeDir = path.join(process.cwd(), ".runtime");
+import os from "os";
+
+const runtimeDir = process.env.VERCEL ? path.join(os.tmpdir(), "zootechx_runtime") : path.join(process.cwd(), ".runtime");
 const file = path.join(runtimeDir, "crm-fallback.json");
 
 const read = async (): Promise<Store> => {
@@ -40,6 +42,21 @@ const read = async (): Promise<Store> => {
       ],
     };
   } catch {
+    try {
+      const defaultPath = path.join(__dirname, "default_data", "crm-fallback.json");
+      const defaultData = JSON.parse(await readFile(defaultPath, "utf8")) as Partial<Store>;
+      const initial: Store = {
+        leads: defaultData.leads ?? [],
+        followups: defaultData.followups ?? [],
+        clients: defaultData.clients ?? [],
+        invoices: defaultData.invoices ?? [],
+        expenses: defaultData.expenses ?? [],
+        payments: defaultData.payments ?? [],
+        quotations: defaultData.quotations ?? [],
+      };
+      await save(initial).catch(() => {});
+      return initial;
+    } catch {}
     return {
       leads: [],
       followups: [],
@@ -57,10 +74,14 @@ const read = async (): Promise<Store> => {
 };
 
 const save = async (store: Store) => {
-  await mkdir(runtimeDir, { recursive: true });
-  const temp = `${file}.tmp`;
-  await writeFile(temp, JSON.stringify(store, null, 2));
-  await rename(temp, file);
+  try {
+    await mkdir(runtimeDir, { recursive: true });
+    const temp = `${file}.tmp`;
+    await writeFile(temp, JSON.stringify(store, null, 2));
+    await rename(temp, file);
+  } catch (err) {
+    console.warn("Unable to persist crm store to disk:", err);
+  }
 };
 
 export const listFallbackLeads = async () => (await read()).leads;

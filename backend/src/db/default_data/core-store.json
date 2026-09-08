@@ -1,0 +1,352 @@
+{
+  "users": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "name": "ZootechX Super Admin",
+      "email": "admin@erp.com",
+      "password_hash": "$2a$12$R.7wK4jA8nI2K1L7x8Jxe.q2B6U9R4o8QeL6kM5xZ7k1G9y8f4K.W",
+      "role": "SUPER_ADMIN",
+      "department": "Executive",
+      "is_active": true,
+      "must_change_password": false,
+      "created_at": "2026-01-01T00:00:00.000Z",
+      "updated_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "name": "ZootechX Sub Admin",
+      "email": "subadmin@erp.com",
+      "password_hash": "$2a$12$R.7wK4jA8nI2K1L7x8Jxe.q2B6U9R4o8QeL6kM5xZ7k1G9y8f4K.W",
+      "role": "SUB_ADMIN",
+      "department": "Operations",
+      "is_active": true,
+      "must_change_password": false,
+      "created_at": "2026-01-01T00:00:00.000Z",
+      "updated_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "name": "ZootechX Sales Lead",
+      "email": "sales@erp.com",
+      "password_hash": "$2a$12$R.7wK4jA8nI2K1L7x8Jxe.q2B6U9R4o8QeL6kM5xZ7k1G9y8f4K.W",
+      "role": "SALES",
+      "department": "Sales & BD",
+      "is_active": true,
+      "must_change_password": false,
+      "created_at": "2026-01-01T00:00:00.000Z",
+      "updated_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "name": "ZootechX Growth & Marketing",
+      "email": "marketing@erp.com",
+      "password_hash": "$2a$12$R.7wK4jA8nI2K1L7x8Jxe.q2B6U9R4o8QeL6kM5xZ7k1G9y8f4K.W",
+      "role": "DIGITAL_MARKETING",
+      "department": "Marketing",
+      "is_active": true,
+      "must_change_password": false,
+      "created_at": "2026-01-01T00:00:00.000Z",
+      "updated_at": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "name": "ZootechX Lead Developer",
+      "email": "dev@erp.com",
+      "password_hash": "$2a$12$R.7wK4jA8nI2K1L7x8Jxe.q2B6U9R4o8QeL6kM5xZ7k1G9y8f4K.W",
+      "role": "DEVELOPER",
+      "department": "Engineering",
+      "is_active": true,
+      "must_change_password": false,
+      "created_at": "2026-01-01T00:00:00.000Z",
+      "updated_at": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "1bcbeed5-bdb3-4ba8-8cf3-e33bde8d70ec",
+      "action": "TASK_CREATED",
+      "entity": "TASK",
+      "entity_id": "416ecfa1-d738-4d91-a160-9afcdaa59bfd",
+      "details": "Created task: Client Contract Review for ZootechX Sales",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "user_name": "ZootechX Super Admin",
+      "created_at": "2026-09-08T11:00:56.722Z"
+    },
+    {
+      "id": "89c0a659-8855-45b9-b84b-d0ceac70511a",
+      "action": "TASK_CREATED",
+      "entity": "TASK",
+      "entity_id": "f6a297fe-f038-4ea6-95e7-aab297678875",
+      "details": "Created task: sales for ZootechX Sales Lead",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "user_name": "ZootechX Super Admin",
+      "created_at": "2026-09-08T10:54:35.742Z"
+    },
+    {
+      "id": "df930fa1-3479-4bf7-8a2f-d2d5c81ec6a1",
+      "action": "TASK_CREATED",
+      "entity": "TASK",
+      "entity_id": "8a469e93-51d8-448f-bf80-580a9fa99ff4",
+      "details": "Created task: Special Sales Follow-up Task for ZootechX Sales",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "user_name": "ZootechX Super Admin",
+      "created_at": "2026-09-08T10:43:31.944Z"
+    },
+    {
+      "id": "311fcb8b-a01f-49ff-b418-a6a20aec6c28",
+      "action": "DEVELOPER_ISSUE",
+      "entity": "DEVELOPER",
+      "entity_id": "iss-99764570",
+      "details": "ALi reported BUG: Issue",
+      "user_id": "25c45b2d-5ca1-4243-bdeb-c3b68be75b44",
+      "user_name": "ALi",
+      "created_at": "2026-09-08T10:33:27.656Z"
+    },
+    {
+      "id": "3ec7267a-99b9-4f42-9379-4f940d9e119a",
+      "action": "DEVELOPER_ISSUE",
+      "entity": "DEVELOPER",
+      "entity_id": "iss-4f96f019",
+      "details": "ZootechX Lead Developer reported BUG: Memory spike during heavy PDF rendering",
+      "user_id": "00000000-0000-4000-8000-000000000005",
+      "user_name": "ZootechX Lead Developer",
+      "created_at": "2026-09-08T10:31:22.202Z"
+    },
+    {
+      "id": "5a9b5a37-c542-41c5-9496-8fce190a3317",
+      "action": "TASK_CREATED",
+      "entity": "TASK",
+      "entity_id": "f0453ef0-8a7f-42a7-9b36-2c786de03bea",
+      "details": "Created task: Task for ZootechX Super Admin",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "user_name": "ZootechX Super Admin",
+      "created_at": "2026-09-08T09:48:48.587Z"
+    },
+    {
+      "id": "780716b1-b4e2-4c9d-a5bd-70d71c74ba9d",
+      "action": "DAILY_UPDATE",
+      "entity": "DEVELOPER",
+      "entity_id": "a8a5da22-a203-4e07-a15a-6560ec2e41b2",
+      "details": "Lead Developer submitted daily update (8h)",
+      "user_id": "25c45b2d-5ca1-4243-bdeb-c3b68be75b44",
+      "user_name": "Lead Developer",
+      "created_at": "2026-09-08T09:38:56.518Z"
+    },
+    {
+      "id": "cfd49da5-958f-44a0-8adf-c833c6693c18",
+      "action": "TASK_CREATED",
+      "entity": "TASK",
+      "entity_id": "1d9f54fc-c459-4e57-97cb-9aeed09c6706",
+      "details": "Created task: Builder for ZootechX Super Admin",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "user_name": "ZootechX Super Admin",
+      "created_at": "2026-09-08T08:25:19.016Z"
+    },
+    {
+      "id": "ad059708-f934-449f-abb3-af0f736538ae",
+      "action": "SOW_CREATED",
+      "entity": "SOW",
+      "entity_id": "158b71e7-eb72-4c0f-bba0-be815b6e7960",
+      "details": "Generated SOW SOW-2026-001 for project LLT (Client: Ali)",
+      "user_id": "00000000-0000-4000-8000-000000000001",
+      "user_name": "ZootechX Super Admin",
+      "created_at": "2026-09-08T08:06:46.921Z"
+    }
+  ],
+  "sows": [
+    {
+      "id": "158b71e7-eb72-4c0f-bba0-be815b6e7960",
+      "sow_number": "SOW-2026-001",
+      "client_id": "b4ba92a2-8f73-4811-aa38-9f9fe3e268e1",
+      "client_name": "Ali",
+      "client_company": "Alibaba",
+      "project_name": "LLT",
+      "template_id": "d6333d8e-0755-4d34-9e5b-8af3070a4f53",
+      "template_name": "ZootechX Global Offshore Engineering Contract",
+      "template_version": 4,
+      "template_version_label": "v4.0",
+      "version": 1,
+      "version_label": "v1.0",
+      "scope_raw": "SOW Check",
+      "rendered_document": "# SCOPE OF WORK PROPOSAL: LLT\n**Document Ref:** SOW-2026-001 | **Date:** September 8, 2026\n**Service:** Custom Software & Offshore Engineering\n**Provider:** ZootechX Technologies Pvt Ltd (https://zootechx.ai)\n\n---\n### 1. Client & Counterparty\n- **Client Name:** Ali\n- **Company:** Alibaba\n\n---\n### 2. Scope & Technical Architecture\nSOW Check\n\n---\n### 3. Commercial Investment & Milestones\n- **Total Commercial Fee:** ₹250,000\n- **Estimated Timeline:** 6 Weeks\n- **Payment Terms:** 50% advance mobilization, 25% on staging deployment, 25% upon final QA & production release.\n\n---\n### 4. Official Execution & Contacts\n- **Direct Email:** sales@zootechx.com | **Phone:** +91 98765 43210\n- **Prepared By:** ZootechX Super Admin",
+      "project_value": 250000,
+      "payment_terms": "50% advance mobilization, 25% on staging deployment, 25% upon final QA & production release.",
+      "timeline_weeks": 6,
+      "status": "Generated",
+      "share_token": "730b7e46-f29",
+      "share_expires_at": "2026-10-08T08:06:46.869Z",
+      "prepared_by_name": "ZootechX Super Admin",
+      "created_by_id": "00000000-0000-4000-8000-000000000001",
+      "created_at": "2026-09-08T08:06:46.671Z",
+      "updated_at": "2026-09-08T08:06:46.671Z",
+      "versions": [
+        {
+          "version": 1,
+          "version_label": "v1.0",
+          "scope_raw": "SOW Check",
+          "rendered_document": "# SCOPE OF WORK PROPOSAL: LLT\n**Document Ref:** SOW-2026-001 | **Date:** September 8, 2026\n**Service:** Custom Software & Offshore Engineering\n**Provider:** ZootechX Technologies Pvt Ltd (https://zootechx.ai)\n\n---\n### 1. Client & Counterparty\n- **Client Name:** Ali\n- **Company:** Alibaba\n\n---\n### 2. Scope & Technical Architecture\nSOW Check\n\n---\n### 3. Commercial Investment & Milestones\n- **Total Commercial Fee:** ₹250,000\n- **Estimated Timeline:** 6 Weeks\n- **Payment Terms:** 50% advance mobilization, 25% on staging deployment, 25% upon final QA & production release.\n\n---\n### 4. Official Execution & Contacts\n- **Direct Email:** sales@zootechx.com | **Phone:** +91 98765 43210\n- **Prepared By:** ZootechX Super Admin",
+          "project_value": 250000,
+          "payment_terms": "50% advance mobilization, 25% on staging deployment, 25% upon final QA & production release.",
+          "updated_at": "2026-09-08T08:06:46.671Z",
+          "updated_by_name": "ZootechX Super Admin"
+        }
+      ],
+      "email_history": []
+    }
+  ],
+  "dailyUpdates": [
+    {
+      "id": "a8a5da22-a203-4e07-a15a-6560ec2e41b2",
+      "developer_id": "25c45b2d-5ca1-4243-bdeb-c3b68be75b44",
+      "developer_name": "Lead Developer",
+      "completed_today": "20%",
+      "in_progress": "20%",
+      "pending": "None",
+      "blocked": "None",
+      "tomorrows_plan": "Check",
+      "hours_worked": 8,
+      "project_name": "zOOtech",
+      "created_at": "2026-09-08T09:38:56.504Z"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "f6a297fe-f038-4ea6-95e7-aab297678875",
+      "title": "sales",
+      "description": "sales complete",
+      "assigned_to_id": "00000000-0000-4000-8000-000000000003",
+      "assigned_to_name": "ZootechX Sales Lead",
+      "related_type": "PROJECT",
+      "related_id": null,
+      "related_name": "sales",
+      "priority": "MEDIUM",
+      "status": "TO_DO",
+      "due_date": "2026-09-11",
+      "created_by_name": "ZootechX Super Admin",
+      "created_at": "2026-09-08T10:54:35.722Z",
+      "updated_at": "2026-09-08T10:54:35.722Z"
+    },
+    {
+      "id": "f0453ef0-8a7f-42a7-9b36-2c786de03bea",
+      "title": "Task",
+      "description": "You need to complete it",
+      "assigned_to_id": "00000000-0000-4000-8000-000000000001",
+      "assigned_to_name": "ZootechX Super Admin",
+      "related_type": "PROJECT",
+      "related_id": null,
+      "related_name": "fasfs",
+      "priority": "MEDIUM",
+      "status": "TO_DO",
+      "due_date": "2026-09-11",
+      "created_by_name": "ZootechX Super Admin",
+      "created_at": "2026-09-08T09:48:48.479Z",
+      "updated_at": "2026-09-08T09:48:48.479Z"
+    },
+    {
+      "id": "1d9f54fc-c459-4e57-97cb-9aeed09c6706",
+      "title": "Builder",
+      "description": "Builder Task",
+      "assigned_to_id": "00000000-0000-4000-8000-000000000001",
+      "assigned_to_name": "ZootechX Super Admin",
+      "related_type": "PROJECT",
+      "related_id": null,
+      "related_name": "Company",
+      "priority": "MEDIUM",
+      "status": "COMPLETED",
+      "due_date": "2026-09-11",
+      "created_by_name": "ZootechX Super Admin",
+      "created_at": "2026-09-08T08:25:18.899Z",
+      "updated_at": "2026-09-08T09:46:19.096Z"
+    }
+  ],
+  "developerIssues": [
+    {
+      "id": "iss-99764570",
+      "developer_id": "25c45b2d-5ca1-4243-bdeb-c3b68be75b44",
+      "developer_name": "ALi",
+      "title": "Issue",
+      "description": "BUg",
+      "project_name": "Builder",
+      "priority": "MEDIUM",
+      "type": "BUG",
+      "status": "RESOLVED",
+      "created_at": "2026-09-08T10:33:27.639Z",
+      "updated_at": "2026-09-08T10:52:38.446Z"
+    },
+    {
+      "id": "iss-4f96f019",
+      "developer_id": "00000000-0000-4000-8000-000000000005",
+      "developer_name": "ZootechX Lead Developer",
+      "title": "Memory spike during heavy PDF rendering",
+      "description": "Puppeteer / Chromium process leaks memory when generating 100+ invoices consecutively. Suggest pooling browser instances.",
+      "project_name": "Invoice Generator",
+      "priority": "HIGH",
+      "type": "BUG",
+      "status": "RESOLVED",
+      "created_at": "2026-09-08T10:31:22.186Z",
+      "updated_at": "2026-09-08T10:31:22.239Z"
+    }
+  ],
+  "activeTemplate": {
+    "id": "d6333d8e-0755-4d34-9e5b-8af3070a4f53",
+    "name": "ZootechX Global Offshore Engineering Contract",
+    "version": 4,
+    "version_label": "v4.0",
+    "template_content": "# SCOPE OF WORK PROPOSAL: {{project_name}}\n**Document Ref:** {{sow_number}} | **Date:** {{date}}\n**Service:** {{service_name}}\n**Provider:** {{company_name}} ({{company_website}})\n\n---\n### 1. Client & Counterparty\n- **Client Name:** {{client_name}}\n- **Company:** {{client_company}}\n\n---\n### 2. Scope & Technical Architecture\n{{scope_of_work}}\n\n---\n### 3. Commercial Investment & Milestones\n- **Total Commercial Fee:** {{project_value}}\n- **Estimated Timeline:** {{timeline}}\n- **Payment Terms:** {{payment_terms}}\n\n---\n### 4. Official Execution & Contacts\n- **Direct Email:** {{company_email}} | **Phone:** {{company_phone}}\n- **Prepared By:** {{prepared_by}}",
+    "default_terms": "50% advance mobilization, 25% on staging deployment, 25% upon final QA & production release.",
+    "uploaded_by_id": "2bb740f6-8a8e-4962-ab42-47e456bc78ed",
+    "uploaded_by_name": "SUPER_ADMIN",
+    "uploaded_at": "2026-09-04T10:30:22.576Z",
+    "is_active": true,
+    "file_name": "zootechx-master-sow-v2.md"
+  },
+  "templateHistory": [
+    {
+      "id": "8c62cc26-8ca3-4c49-b68f-5646f970c68d",
+      "name": "ZootechX Global Offshore Engineering Contract",
+      "version": 3,
+      "version_label": "v3.0",
+      "template_content": "# SCOPE OF WORK PROPOSAL: {{project_name}}\n**Document Ref:** {{sow_number}} | **Date:** {{date}}\n**Service:** {{service_name}}\n**Provider:** {{company_name}} ({{company_website}})\n\n---\n### 1. Client & Counterparty\n- **Client Name:** {{client_name}}\n- **Company:** {{client_company}}\n\n---\n### 2. Scope & Technical Architecture\n{{scope_of_work}}\n\n---\n### 3. Commercial Investment & Milestones\n- **Total Commercial Fee:** {{project_value}}\n- **Estimated Timeline:** {{timeline}}\n- **Payment Terms:** {{payment_terms}}\n\n---\n### 4. Official Execution & Contacts\n- **Direct Email:** {{company_email}} | **Phone:** {{company_phone}}\n- **Prepared By:** {{prepared_by}}",
+      "default_terms": "50% advance mobilization, 25% on staging deployment, 25% upon final QA & production release.",
+      "uploaded_by_id": "00000000-0000-4000-8000-000000000001",
+      "uploaded_at": "2026-09-04T10:28:13.463Z",
+      "is_active": false,
+      "file_name": "zootechx-master-sow-v2.md"
+    },
+    {
+      "id": "e926234c-c4d0-425a-acee-cededf10ab52",
+      "name": "ZootechX Global Offshore Engineering Contract",
+      "version": 2,
+      "version_label": "v2.0",
+      "template_content": "# SCOPE OF WORK PROPOSAL: {{project_name}}\n**Document Ref:** {{sow_number}} | **Date:** {{date}}\n**Service:** {{service_name}}\n**Provider:** {{company_name}} ({{company_website}})\n\n---\n### 1. Client & Counterparty\n- **Client Name:** {{client_name}}\n- **Company:** {{client_company}}\n\n---\n### 2. Scope & Technical Architecture\n{{scope_of_work}}\n\n---\n### 3. Commercial Investment & Milestones\n- **Total Commercial Fee:** {{project_value}}\n- **Estimated Timeline:** {{timeline}}\n- **Payment Terms:** {{payment_terms}}\n\n---\n### 4. Official Execution & Contacts\n- **Direct Email:** {{company_email}} | **Phone:** {{company_phone}}\n- **Prepared By:** {{prepared_by}}",
+      "default_terms": "50% advance mobilization, 25% on staging deployment, 25% upon final QA & production release.",
+      "uploaded_by_id": "00000000-0000-4000-8000-000000000001",
+      "uploaded_at": "2026-09-04T10:24:31.562Z",
+      "is_active": false,
+      "file_name": "zootechx-master-sow-v2.md"
+    },
+    {
+      "id": "global-sow-tpl-01",
+      "name": "ZootechX Standard Agency SOW Template",
+      "version": 1,
+      "version_label": "v1.0",
+      "template_content": "# SCOPE OF WORK & PROJECT AGREEMENT\n## Document Reference: {{sow_number}}\n\n**Prepared By:** {{company_name}}  \n**Client:** {{client_name}} ({{client_company}})  \n**Project Title:** {{project_name}}  \n**Service Category:** {{service_name}}  \n**Date:** {{date}}  \n**Lead Architect:** {{prepared_by}}  \n**Engagement Value:** {{project_value}}  \n**Estimated Timeline:** {{timeline}}  \n\n---\n\n### 1. Executive Summary & Objective\n{{company_name}} is officially commissioned to deliver the **{{project_name}}** solution for **{{client_company}}**. This Scope of Work establishes the technical architecture, operational deliverables, and mutual milestone expectations.\n\n---\n\n### 2. Comprehensive Scope of Work\n{{scope_of_work}}\n\n---\n\n### 3. Deliverables & Acceptance Criteria\n1. **Architecture & Wireframes:** Database schema blueprints, technical interface diagrams, and wireframe approvals.\n2. **Core Implementation:** High-performance, modular source code tracked in version-controlled Git repository.\n3. **Quality Assurance & Testing:** Comprehensive unit and end-to-end integration tests on staging environment.\n4. **Production Deployment & Warranty:** Zero-downtime release, environment configurations, and 30-day post-launch warranty.\n\n---\n\n### 4. Commercial Terms & Payment Schedule\n- **Total Project Value:** {{project_value}}  \n- **Payment Schedule:**  \n{{payment_terms}}\n\n---\n\n### 5. Terms, Exclusions & Non-Disclosure\n- Changes to deliverables not explicitly mentioned in this document will be handled through a formalized Change Request.\n- Both parties maintain strict confidentiality regarding project source code, database credentials, and business IP.\n\n---\n\n### 6. Sign-off & Mutual Authorization\n\n**Authorized for {{company_name}}**  \n*{{prepared_by}}*  \nEmail: {{company_email}} | Phone: {{company_phone}} | Web: {{company_website}}  \n\n**Authorized for {{client_company}}**  \n*Client Authorized Representative*",
+      "default_terms": "50% advance on milestone sign-off, 25% on staging review, 25% on final production deployment.",
+      "uploaded_by_id": "00000000-0000-4000-8000-000000000001",
+      "uploaded_by_name": "ZootechX Super Admin",
+      "uploaded_at": "2026-01-01T00:00:00.000Z",
+      "is_active": false,
+      "file_name": "zootechx-company-sow-v1.0.md"
+    }
+  ],
+  "companySettings": {
+    "company_name": "ZootechX Technologies Pvt Ltd",
+    "company_logo": "https://zootechx.ai/logo.png",
+    "company_email": "sales@zootechx.com",
+    "company_phone": "+91 98765 43210",
+    "company_website": "https://zootechx.ai",
+    "company_address": "Tech Hub Tower, B-Wing, Mumbai, Maharashtra 400051",
+    "updated_at": "2026-09-04T10:30:22.620Z",
+    "updated_by": "SUPER_ADMIN"
+  }
+}

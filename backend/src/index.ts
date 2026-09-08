@@ -105,6 +105,7 @@ import {
 import { findDemoUser, isDemoPassword } from "./demoUsers";
 type UserRow = { id: string; name: string; email: string; role: "SUPER_ADMIN" | "SUB_ADMIN" | "SALES" | "DEVELOPER" | "DIGITAL_MARKETING"; password_hash: string; must_change_password?: boolean; is_active?: boolean };
 const app = express();
+app.set("trust proxy", 1);
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({
   origin: true,
@@ -117,7 +118,7 @@ app.use((req, _res, next) => {
   }
   next();
 });
-app.use(rateLimit({ windowMs: 900_000, limit: 5_000, standardHeaders: "draft-7" }));
+app.use(rateLimit({ windowMs: 900_000, limit: 5_000, standardHeaders: "draft-7", validate: { xForwardedForHeader: false } }));
 const login = z.object({ email: z.string().email(), password: z.string().min(8) });
 const changePasswordInput = z.object({ currentPassword: z.string().min(8), newPassword: z.string().min(8).max(128) });
 const leadInput = z.object({ fullName: z.string().min(2), company: z.string().max(160).optional(), email: z.string().email().optional(), phone: z.string().max(30).optional(), source: z.string().min(2), notes: z.string().optional(), status: z.enum(["NEW", "CONTACTED", "FOLLOW_UP", "INTERESTED", "QUOTATION_SENT", "NEGOTIATION", "CONVERTED", "LOST"]).optional() });

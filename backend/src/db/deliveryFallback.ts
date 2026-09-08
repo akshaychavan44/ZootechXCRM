@@ -7,19 +7,34 @@ export type FallbackProject = { id: string; name: string; client_name: string | 
 export type FallbackUpdate = { id: string; project_id: string; author_id: string; message: string; progress: number; created_at: string };
 type DeliveryStore = { developers: FallbackDeveloper[]; projects: FallbackProject[]; updates: FallbackUpdate[] };
 
-const runtimeDir = path.join(process.cwd(), ".runtime");
+import os from "os";
+
+const runtimeDir = process.env.VERCEL ? path.join(os.tmpdir(), "zootechx_runtime") : path.join(process.cwd(), ".runtime");
 const storePath = path.join(runtimeDir, "delivery-fallback.json");
 const empty = (): DeliveryStore => ({ developers: [], projects: [], updates: [] });
 
 async function readStore(): Promise<DeliveryStore> {
-  try { return JSON.parse(await readFile(storePath, "utf8")) as DeliveryStore; }
-  catch { return empty(); }
+  try {
+    return JSON.parse(await readFile(storePath, "utf8")) as DeliveryStore;
+  } catch {
+    try {
+      const defaultPath = path.join(__dirname, "default_data", "delivery-fallback.json");
+      const defaultData = JSON.parse(await readFile(defaultPath, "utf8")) as DeliveryStore;
+      await saveStore(defaultData).catch(() => {});
+      return defaultData;
+    } catch {}
+    return empty();
+  }
 }
 async function saveStore(store: DeliveryStore): Promise<void> {
-  await mkdir(runtimeDir, { recursive: true });
-  const temporary = `${storePath}.tmp`;
-  await writeFile(temporary, JSON.stringify(store, null, 2), "utf8");
-  await rename(temporary, storePath);
+  try {
+    await mkdir(runtimeDir, { recursive: true });
+    const temporary = `${storePath}.tmp`;
+    await writeFile(temporary, JSON.stringify(store, null, 2), "utf8");
+    await rename(temporary, storePath);
+  } catch (err) {
+    console.warn("Unable to persist delivery store to disk:", err);
+  }
 }
 
 export async function findFallbackDeveloper(value: string): Promise<FallbackDeveloper | undefined> {

@@ -172,7 +172,9 @@ interface CoreDataStore {
   companySettings: CompanySettings;
 }
 
-const runtimeDir = path.join(process.cwd(), ".runtime");
+import os from "os";
+
+const runtimeDir = process.env.VERCEL ? path.join(os.tmpdir(), "zootechx_runtime") : path.join(process.cwd(), ".runtime");
 const storePath = path.join(runtimeDir, "core-store.json");
 
 const initialTemplates: SowTemplate[] = [
@@ -537,17 +539,28 @@ async function readStore(): Promise<CoreDataStore> {
       companySettings: data.companySettings && data.companySettings.company_name ? data.companySettings : { ...defaultCompanySettings }
     };
   } catch {
+    try {
+      const defaultPath = path.join(__dirname, "default_data", "core-store.json");
+      const defaultRaw = await readFile(defaultPath, "utf8");
+      const defaultData = JSON.parse(defaultRaw) as CoreDataStore;
+      await saveStore(defaultData).catch(() => {});
+      return defaultData;
+    } catch {}
     const fresh = emptyStore();
-    await saveStore(fresh);
+    await saveStore(fresh).catch(() => {});
     return fresh;
   }
 }
 
 async function saveStore(store: CoreDataStore): Promise<void> {
-  await mkdir(runtimeDir, { recursive: true });
-  const tmp = `${storePath}.tmp`;
-  await writeFile(tmp, JSON.stringify(store, null, 2), "utf8");
-  await rename(tmp, storePath);
+  try {
+    await mkdir(runtimeDir, { recursive: true });
+    const tmp = `${storePath}.tmp`;
+    await writeFile(tmp, JSON.stringify(store, null, 2), "utf8");
+    await rename(tmp, storePath);
+  } catch (err) {
+    console.warn("Unable to persist core store to disk:", err);
+  }
 }
 
 // ----------------- USERS -----------------

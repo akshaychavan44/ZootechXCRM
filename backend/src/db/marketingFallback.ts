@@ -502,7 +502,9 @@ const initialAssets: MarketingClientAsset[] = [
   },
 ];
 
-const runtimeDir = path.join(process.cwd(), ".runtime");
+import os from "os";
+
+const runtimeDir = process.env.VERCEL ? path.join(os.tmpdir(), "zootechx_runtime") : path.join(process.cwd(), ".runtime");
 const storePath = path.join(runtimeDir, "marketing-fallback.json");
 
 const emptyStore = (): FallbackMarketingStore => ({
@@ -532,6 +534,14 @@ async function readStore(): Promise<FallbackMarketingStore> {
     return loaded;
   } catch {
     if (memoryCache) return memoryCache;
+    try {
+      const defaultPath = path.join(__dirname, "default_data", "marketing-fallback.json");
+      const defaultRaw = await readFile(defaultPath, "utf8");
+      const defaultData = JSON.parse(defaultRaw) as FallbackMarketingStore;
+      memoryCache = defaultData;
+      await saveStore(defaultData).catch(() => {});
+      return defaultData;
+    } catch {}
     const initial = emptyStore();
     try {
       await saveStore(initial);
@@ -543,10 +553,14 @@ async function readStore(): Promise<FallbackMarketingStore> {
 
 async function saveStore(store: FallbackMarketingStore): Promise<void> {
   memoryCache = store;
-  await mkdir(runtimeDir, { recursive: true });
-  const temporary = `${storePath}.tmp`;
-  await writeFile(temporary, JSON.stringify(store, null, 2), "utf8");
-  await rename(temporary, storePath);
+  try {
+    await mkdir(runtimeDir, { recursive: true });
+    const temporary = `${storePath}.tmp`;
+    await writeFile(temporary, JSON.stringify(store, null, 2), "utf8");
+    await rename(temporary, storePath);
+  } catch (err) {
+    console.warn("Unable to persist marketing store to disk:", err);
+  }
 }
 
 export async function getMarketingOverview() {
