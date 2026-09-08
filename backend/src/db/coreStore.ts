@@ -160,6 +160,16 @@ export interface DeveloperIssue {
   updated_at: string;
 }
 
+export interface PersistentNotification {
+  id: string;
+  user_id?: string | null;
+  title: string;
+  message: string;
+  is_read: boolean;
+  hidden_from_bell?: boolean;
+  created_at: string;
+}
+
 interface CoreDataStore {
   users: ManagedUser[];
   auditLogs: AuditLogEntry[];
@@ -170,6 +180,7 @@ interface CoreDataStore {
   activeTemplate: GlobalSowTemplate;
   templateHistory: GlobalSowTemplate[];
   companySettings: CompanySettings;
+  notifications?: PersistentNotification[];
 }
 
 import os from "os";
@@ -519,7 +530,8 @@ function emptyStore(): CoreDataStore {
     developerIssues: [],
     activeTemplate: { ...defaultActiveTemplate },
     templateHistory: [],
-    companySettings: { ...defaultCompanySettings }
+    companySettings: { ...defaultCompanySettings },
+    notifications: [],
   };
 }
 
@@ -536,7 +548,8 @@ async function readStore(): Promise<CoreDataStore> {
       developerIssues: Array.isArray(data.developerIssues) ? data.developerIssues : [],
       activeTemplate: data.activeTemplate && data.activeTemplate.template_content ? data.activeTemplate : { ...defaultActiveTemplate },
       templateHistory: Array.isArray(data.templateHistory) ? data.templateHistory : [],
-      companySettings: data.companySettings && data.companySettings.company_name ? data.companySettings : { ...defaultCompanySettings }
+      companySettings: data.companySettings && data.companySettings.company_name ? data.companySettings : { ...defaultCompanySettings },
+      notifications: Array.isArray(data.notifications) ? data.notifications : [],
     };
   } catch {
     try {
@@ -1151,4 +1164,67 @@ export async function updateDeveloperIssueStatus(
   await saveStore(store);
   return issue;
 }
+
+// ----------------- NOTIFICATIONS -----------------
+export async function listPersistentNotifications(userId?: string, isAdmin?: boolean): Promise<PersistentNotification[]> {
+  const store = await readStore();
+  const notifs = store.notifications ?? [];
+  return notifs
+    .filter(n => !n.hidden_from_bell && (isAdmin || !n.user_id || n.user_id === userId))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+}
+
+export async function createPersistentNotification(title: string, message: string, userId?: string | null): Promise<PersistentNotification> {
+  const store = await readStore();
+  if (!Array.isArray(store.notifications)) store.notifications = [];
+  const notif: PersistentNotification = {
+    id: `notif-${Date.now()}-${randomUUID().slice(0, 6)}`,
+    user_id: userId || null,
+    title,
+    message,
+    is_read: false,
+    hidden_from_bell: false,
+    created_at: new Date().toISOString(),
+  };
+  store.notifications.unshift(notif);
+  if (store.notifications.length > 80) store.notifications.pop();
+  await saveStore(store);
+  return notif;
+}
+
+export async function markPersistentNotificationRead(id: string, userId?: string, isAdmin?: boolean): Promise<PersistentNotification | undefined> {
+  const store = await readStore();
+  const notifs = store.notifications ?? [];
+  const target = notifs.find(n => n.id === id && (isAdmin || !n.user_id || n.user_id === userId));
+  if (target) {
+    target.is_read = true;
+    await saveStore(store);
+  }
+  return target;
+}
+
+export async function markAllPersistentNotificationsRead(userId?: string, isAdmin?: boolean): Promise<void> {
+  const store = await readStore();
+  let changed = false;
+  for (const n of store.notifications ?? []) {
+    if ((isAdmin || !n.user_id || n.user_id === userId) && !n.is_read) {
+      n.is_read = true;
+      changed = true;
+    }
+  }
+  if (changed) await saveStore(store);
+}
+
+export async function clearReadPersistentNotifications(userId?: string, isAdmin?: boolean): Promise<void> {
+  const store = await readStore();
+  let changed = false;
+  for (const n of store.notifications ?? []) {
+    if ((isAdmin || !n.user_id || n.user_id === userId) && n.is_read && !n.hidden_from_bell) {
+      n.hidden_from_bell = true;
+      changed = true;
+    }
+  }
+  if (changed) await saveStore(store);
+}
+
 

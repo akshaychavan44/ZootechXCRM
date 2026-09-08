@@ -105,17 +105,49 @@ const formatNotificationTime = (isoString?: string) => {
   }
 };
 
+const getReadNotifIds = (): Set<string> => {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem("zootechx_read_notif_ids");
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
+
+const saveReadNotifId = (id: string) => {
+  if (typeof window === "undefined") return;
+  try {
+    const ids = getReadNotifIds();
+    ids.add(id);
+    localStorage.setItem("zootechx_read_notif_ids", JSON.stringify(Array.from(ids).slice(-300)));
+  } catch {}
+};
+
+const saveAllReadNotifIds = (idList: string[]) => {
+  if (typeof window === "undefined") return;
+  try {
+    const ids = getReadNotifIds();
+    for (const id of idList) ids.add(id);
+    localStorage.setItem("zootechx_read_notif_ids", JSON.stringify(Array.from(ids).slice(-300)));
+  } catch {}
+};
+
 type ApiNotification = { id: string; title: string; message: string; is_read: boolean; created_at: string };
 type AppNotification = { id: string; title: string; message: string; text: string; time: string; unread: boolean; createdAt: string };
-const toNotification = (notification: ApiNotification): AppNotification => ({
-  id: notification.id,
-  title: notification.title,
-  message: notification.message,
-  text: `${notification.title}: ${notification.message}`,
-  time: formatNotificationTime(notification.created_at),
-  unread: !notification.is_read,
-  createdAt: notification.created_at,
-});
+const toNotification = (notification: ApiNotification): AppNotification => {
+  const readIds = getReadNotifIds();
+  const isRead = notification.is_read || readIds.has(notification.id);
+  return {
+    id: notification.id,
+    title: notification.title,
+    message: notification.message,
+    text: `${notification.title}: ${notification.message}`,
+    time: formatNotificationTime(notification.created_at),
+    unread: !isRead,
+    createdAt: notification.created_at,
+  };
+};
 type ApiInvoice = { id: string; invoice_number: string; client_id: string; client_name: string; total: string | number; paid_amount: string | number; due_date: string; created_at: string; created_by_name?: string | null };
 const toInvoice = (invoice: ApiInvoice): Invoice => ({ id: invoice.id, number: invoice.invoice_number, clientId: invoice.client_id, clientName: invoice.client_name, date: invoice.created_at.slice(0, 10), dueDate: invoice.due_date.slice(0, 10), placeOfSupply: "27-Maharashtra", items: [], subtotal: Number(invoice.total), total: Number(invoice.total), gstTotal: 0, cgst: 0, sgst: 0, igst: 0, status: Number(invoice.paid_amount) >= Number(invoice.total) ? "Paid" : "Sent", amountPaid: Number(invoice.paid_amount), createdByName: invoice.created_by_name });
 type FinanceExpense = { id: string; title: string; category: string; amount: string | number; expense_date: string | null; payment_method: string | null };
@@ -227,11 +259,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toastMessage]);
 
-  const [notifications, setNotifications] = useState<AppNotification[]>([
-    { id:"1", title:"Follow-up overdue", message:"Sneha Gupta", text:"Follow-up overdue: Sneha Gupta", time:"10m ago", unread:true, createdAt:new Date().toISOString() },
-    { id:"2", title:"New lead converted", message:"Ananya Desai converted", text:"New lead: Ananya Desai converted", time:"1h ago", unread:true, createdAt:new Date(Date.now() - 3600000).toISOString() },
-    { id:"3", title:"Invoice due", message:"INV-2026-001 due in 3 days", text:"Invoice INV-2026-001 due in 3 days", time:"2h ago", unread:false, createdAt:new Date(Date.now() - 7200000).toISOString() }
-  ]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   // Load theme only. CRM data is always loaded from the authenticated backend.
   useEffect(()=>{
@@ -316,7 +344,7 @@ export default function App() {
         }
       } catch {}
     };
-    const pollInterval = setInterval(pollNotifications, 6000);
+    const pollInterval = setInterval(pollNotifications, 4000);
     return () => clearInterval(pollInterval);
   }, [isLoggedIn]);
 
@@ -420,10 +448,13 @@ export default function App() {
   const searchResultCount = searchMatches.leads.length + searchMatches.followUps.length + searchMatches.clients.length + searchMatches.invoices.length;
   const bellNotifications = notificationTab === "unread" ? notifications.filter(notification => notification.unread) : notifications;
   const markNotificationRead = async (id: string) => {
+    saveReadNotifId(id);
     setNotifications(current => current.map(notification => notification.id === id ? { ...notification, unread: false } : notification));
     await apiFetch(`/api/notifications/${id}/read`, { method: "PATCH" }).catch(() => {});
   };
   const markAllNotificationsRead = async () => {
+    const allIds = notifications.map(n => n.id);
+    saveAllReadNotifIds(allIds);
     setNotifications(current => current.map(notification => ({ ...notification, unread: false })));
     await apiFetch("/api/notifications/read-all", { method: "POST" }).catch(() => {});
   };

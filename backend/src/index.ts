@@ -58,6 +58,11 @@ import {
   listTasks,
   recordAuditLog,
   recordSowEmailHistory,
+  clearReadPersistentNotifications,
+  createPersistentNotification,
+  listPersistentNotifications,
+  markAllPersistentNotificationsRead,
+  markPersistentNotificationRead,
   replaceActiveSowTemplate,
   resetManagedUserPassword,
   revokeSowShareLink,
@@ -270,168 +275,121 @@ app.get("/api/auth/me", requireAuth, async (request: AuthRequest, response) => {
     response.json({ user: (managed ? { id: managed.id, name: managed.name, email: managed.email, role: managed.role } : findDemoUser(request.user!.id)) ?? null, offline: true });
   }
 });
-type MemoryNotification = {
-  id: string;
-  user_id?: string;
-  title: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-  hidden_from_bell?: boolean;
-};
-
-const memoryNotifications: MemoryNotification[] = [];
-
 export function recordNotification(title: string, message: string, userId?: string) {
-  const notif: MemoryNotification = {
-    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    user_id: userId,
-    title,
-    message,
-    is_read: false,
-    created_at: new Date().toISOString(),
-    hidden_from_bell: false,
-  };
-  memoryNotifications.unshift(notif);
-  if (memoryNotifications.length > 50) memoryNotifications.pop();
-
-  if (userId) {
-    withDbTimeout(sql`INSERT INTO notifications (user_id, title, message, is_read, created_at) VALUES (${userId}, ${title}, ${message}, false, now())`, 800).catch(() => {});
-  }
+  // 1. Always persist to core store so notifications survive restarts, refreshes & serverless cold-starts
+  createPersistentNotification(title, message, userId).then((notif) => {
+    // 2. Also insert into PostgreSQL table if available with exact ID
+    withDbTimeout(sql`INSERT INTO notifications (id, user_id, title, message, is_read, created_at) VALUES (${notif.id}, ${userId || null}, ${title}, ${message}, false, now())`, 800).catch(() => {});
+  }).catch(() => {});
 }
 
 app.get("/api/notifications", requireAuth, async (request: AuthRequest, response) => {
+  const isAdmin = request.user?.role === "SUPER_ADMIN" || request.user?.role === "SUB_ADMIN";
+  const userId = request.user?.id;
+
   let dbRows: any[] = [];
   try {
-    dbRows = await withDbTimeout(sql`SELECT id, user_id, title, message, is_read, created_at FROM notifications WHERE (user_id = ${request.user!.id} OR user_id IS NULL) AND hidden_from_bell = false AND NOT (is_read = true AND created_at < now() - interval '7 days') ORDER BY created_at DESC LIMIT 30`, 800);
+    if (isAdmin) {
+      dbRows = await withDbTimeout(sql`SELECT id, user_id, title, message, is_read, created_at FROM notifications WHERE hidden_from_bell = false AND NOT (is_read = true AND created_at < now() - interval '7 days') ORDER BY created_at DESC LIMIT 50`, 800);
+    } else {
+      dbRows = await withDbTimeout(sql`SELECT id, user_id, title, message, is_read, created_at FROM notifications WHERE (user_id = ${userId} OR user_id IS NULL) AND hidden_from_bell = false AND NOT (is_read = true AND created_at < now() - interval '7 days') ORDER BY created_at DESC LIMIT 50`, 800);
+    }
   } catch {
     dbRows = [];
   }
 
-  const combined: MemoryNotification[] = [...dbRows];
-  const seenIds = new Set(dbRows.map((r: any) => String(r.id)));
+  // Fetch persistent notifications from core store
+  const persistentRows = await listPersistentNotifications(userId, isAdmin);
 
-  for (const m of memoryNotifications) {
-    if (!m.hidden_from_bell && (!m.user_id || m.user_id === request.user!.id) && !seenIds.has(m.id)) {
-      combined.push(m);
-      seenIds.add(m.id);
+  const combined: any[] = [...dbRows];
+  const seenIds = new Set(dbRows.map((r: any) => String(r.id)));
+  const seenKeys = new Set(dbRows.map((r: any) => `${r.title}:::${r.message}`));
+
+  for (const p of persistentRows) {
+    const key = `${p.title}:::${p.message}`;
+    if (!seenIds.has(p.id) && !seenKeys.has(key)) {
+      combined.push(p);
+      seenIds.add(p.id);
+      seenKeys.add(key);
     }
   }
 
-  // Synthesize live real-time notifications from CRM entities if list is small
-  if (combined.length < 3) {
-    try {
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const followups = await withDbTimeout(sql`SELECT id, lead_name, company, followup_date, status FROM followups WHERE status != 'Completed' ORDER BY followup_date ASC LIMIT 3`, 600)
-        .catch(async () => (await listFallbackFollowups()).filter(f => f.status !== "Completed").slice(0, 3));
-
-      for (const f of followups) {
-        const isOverdue = f.followup_date < todayStr;
-        const title = isOverdue ? "Follow-up Overdue" : "Follow-up Scheduled";
-        const msg = `${f.lead_name}${f.company ? ` (${f.company})` : ""} is ${isOverdue ? "overdue since" : "due on"} ${f.followup_date}`;
-        const autoId = `auto-f-${f.id}`;
-        const fDate = new Date(f.followup_date);
-        const autoCreated = !isNaN(fDate.getTime()) ? fDate.toISOString() : new Date(Date.now() - 3600000).toISOString();
-        if (!seenIds.has(autoId)) {
-          combined.push({
-            id: autoId,
-            user_id: request.user!.id,
-            title,
-            message: msg,
-            is_read: false,
-            created_at: autoCreated,
-          });
-          seenIds.add(autoId);
-        }
-      }
-
-      const invoices = await withDbTimeout(sql`SELECT id, invoice_number, client_name, total, paid_amount, due_date, created_at FROM invoices ORDER BY created_at DESC LIMIT 3`, 600)
-        .catch(async () => (await listFallbackInvoices()).slice(0, 3));
-
-      for (const inv of invoices) {
-        const isUnpaid = Number(inv.paid_amount || 0) < Number(inv.total || 0);
-        const title = isUnpaid ? "Invoice Payment Pending" : "Invoice Paid";
-        const msg = `${inv.invoice_number} for ${inv.client_name} (₹${Number(inv.total).toLocaleString()})`;
-        const autoId = `auto-i-${inv.id}`;
-        if (!seenIds.has(autoId)) {
-          combined.push({
-            id: autoId,
-            user_id: request.user!.id,
-            title,
-            message: msg,
-            is_read: !isUnpaid,
-            created_at: inv.created_at || new Date(Date.now() - 7200000).toISOString(),
-          });
-          seenIds.add(autoId);
-        }
-      }
-
-      const leads = await withDbTimeout(sql`SELECT id, full_name, company, status, created_at FROM leads ORDER BY created_at DESC LIMIT 2`, 600)
-        .catch(async () => (await listFallbackLeads()).slice(0, 2));
-
-      for (const l of leads) {
-        const title = "New Lead Activity";
-        const msg = `${l.full_name}${l.company ? ` from ${l.company}` : ""} status: ${l.status}`;
-        const autoId = `auto-l-${l.id}`;
-        if (!seenIds.has(autoId)) {
-          combined.push({
-            id: autoId,
-            user_id: request.user!.id,
-            title,
-            message: msg,
-            is_read: false,
-            created_at: l.created_at || new Date(Date.now() - 10800000).toISOString(),
-          });
-          seenIds.add(autoId);
-        }
-      }
-    } catch {}
-  }
-
   combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  response.json({ data: combined.slice(0, 25) });
+  response.json({ data: combined.slice(0, 40) });
 });
 
 app.get("/api/notifications/history", requireAuth, async (request: AuthRequest, response) => {
+  const isAdmin = request.user?.role === "SUPER_ADMIN" || request.user?.role === "SUB_ADMIN";
+  const userId = request.user?.id;
   try {
-    const rows = await withDbTimeout(sql`SELECT id, user_id, title, message, is_read, created_at FROM notifications WHERE user_id = ${request.user!.id} ORDER BY created_at DESC`, 800);
+    const rows = await withDbTimeout(
+      isAdmin
+        ? sql`SELECT id, user_id, title, message, is_read, created_at FROM notifications ORDER BY created_at DESC LIMIT 100`
+        : sql`SELECT id, user_id, title, message, is_read, created_at FROM notifications WHERE (user_id = ${userId} OR user_id IS NULL) ORDER BY created_at DESC LIMIT 100`,
+      800
+    );
     response.json({ data: rows });
   } catch {
-    response.json({ data: memoryNotifications.filter(m => !m.user_id || m.user_id === request.user!.id) });
+    const persistent = await listPersistentNotifications(userId, isAdmin);
+    response.json({ data: persistent });
   }
 });
 
 app.patch("/api/notifications/:id/read", requireAuth, async (request: AuthRequest, response) => {
   const notifId = String(request.params.id);
-  const mem = memoryNotifications.find(m => m.id === notifId);
-  if (mem) mem.is_read = true;
+  const isAdmin = request.user?.role === "SUPER_ADMIN" || request.user?.role === "SUB_ADMIN";
+  const userId = request.user?.id;
+
+  // 1. Persistent store
+  await markPersistentNotificationRead(notifId, userId, isAdmin).catch(() => {});
+
+  // 2. PostgreSQL
   try {
-    const rows = await withDbTimeout(sql`UPDATE notifications SET is_read = true WHERE id = ${notifId} AND user_id = ${request.user!.id} RETURNING id, user_id, title, message, is_read, created_at`, 800);
-    response.json({ data: rows[0] || { id: notifId, is_read: true } });
-  } catch {
-    response.json({ data: { id: notifId, is_read: true } });
-  }
+    if (isAdmin) {
+      await withDbTimeout(sql`UPDATE notifications SET is_read = true WHERE id = ${notifId}`, 800);
+    } else {
+      await withDbTimeout(sql`UPDATE notifications SET is_read = true WHERE id = ${notifId} AND (user_id = ${userId} OR user_id IS NULL)`, 800);
+    }
+  } catch {}
+
+  response.json({ data: { id: notifId, is_read: true } });
 });
 
 app.post("/api/notifications/read-all", requireAuth, async (request: AuthRequest, response) => {
-  for (const m of memoryNotifications) {
-    if (!m.user_id || m.user_id === request.user!.id) m.is_read = true;
-  }
+  const isAdmin = request.user?.role === "SUPER_ADMIN" || request.user?.role === "SUB_ADMIN";
+  const userId = request.user?.id;
+
+  // 1. Persistent store
+  await markAllPersistentNotificationsRead(userId, isAdmin).catch(() => {});
+
+  // 2. PostgreSQL
   try {
-    await withDbTimeout(sql`UPDATE notifications SET is_read = true WHERE user_id = ${request.user!.id} AND is_read = false`, 800);
+    if (isAdmin) {
+      await withDbTimeout(sql`UPDATE notifications SET is_read = true WHERE is_read = false`, 800);
+    } else {
+      await withDbTimeout(sql`UPDATE notifications SET is_read = true WHERE (user_id = ${userId} OR user_id IS NULL) AND is_read = false`, 800);
+    }
   } catch {}
+
   response.status(204).send();
 });
 
 app.post("/api/notifications/clear-read", requireAuth, async (request: AuthRequest, response) => {
-  for (let i = memoryNotifications.length - 1; i >= 0; i--) {
-    if (memoryNotifications[i].is_read && (!memoryNotifications[i].user_id || memoryNotifications[i].user_id === request.user!.id)) {
-      memoryNotifications[i].hidden_from_bell = true;
-    }
-  }
+  const isAdmin = request.user?.role === "SUPER_ADMIN" || request.user?.role === "SUB_ADMIN";
+  const userId = request.user?.id;
+
+  // 1. Persistent store
+  await clearReadPersistentNotifications(userId, isAdmin).catch(() => {});
+
+  // 2. PostgreSQL
   try {
-    await withDbTimeout(sql`UPDATE notifications SET hidden_from_bell = true WHERE user_id = ${request.user!.id} AND is_read = true`, 800);
+    if (isAdmin) {
+      await withDbTimeout(sql`UPDATE notifications SET hidden_from_bell = true WHERE is_read = true`, 800);
+    } else {
+      await withDbTimeout(sql`UPDATE notifications SET hidden_from_bell = true WHERE (user_id = ${userId} OR user_id IS NULL) AND is_read = true`, 800);
+    }
   } catch {}
+
   response.status(204).send();
 });
 app.get("/api/leads", requireAuth, async (_request: AuthRequest, response) => {
