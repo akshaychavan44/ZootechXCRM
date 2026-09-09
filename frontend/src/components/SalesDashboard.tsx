@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, CalendarDays, ClipboardList, Search,
   Sun, Moon, ShieldCheck, Phone, Mail, Clock, ExternalLink,
-  ChevronRight, Filter, LogOut, CheckCircle2, AlertCircle, Building, X, Megaphone
+  ChevronRight, Filter, LogOut, CheckCircle2, AlertCircle, Building, X, Megaphone,
+  LayoutDashboard, TrendingUp, Target, Flame, ArrowUpRight, CheckSquare
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import ScopeOfWorkWorkspace from "./ScopeOfWorkWorkspace";
@@ -52,7 +53,7 @@ type Client = {
 };
 
 export default function SalesDashboard({ onLogout, dark: propDark = true, onToggleTheme }: SalesDashboardProps) {
-  const [page, setPage] = useState<"leads" | "followups" | "clients" | "sows" | "tasks">("leads");
+  const [page, setPage] = useState<"dashboard" | "leads" | "followups" | "clients" | "sows" | "tasks">("dashboard");
   const [dark, setDark] = useState<boolean>(() => {
     if (propDark !== undefined) return propDark;
     if (typeof window !== "undefined") {
@@ -177,14 +178,44 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
   const inputBg = dark ? "bg-[#171f30] border-[#222d42] text-[#f1f5f9] placeholder-[#5a687d]" : "bg-[#fcfaf7] border-[#e5dcd0] text-[#1c1917] placeholder-[#a8a199]";
   const mutedText = dark ? "text-[#8e9bb0]" : "text-[#78716c]";
 
+  // Sales Funnel & Summary Analytics
+  const totalLeadsCount = leads.length;
+  const convertedLeads = useMemo(() => leads.filter((l) => {
+    const s = (l.status || "").toUpperCase();
+    return s.includes("CONVERT") || s.includes("WON") || s.includes("CLOSED");
+  }), [leads]);
+  const conversionRate = totalLeadsCount > 0 ? Math.round((convertedLeads.length / totalLeadsCount) * 100) : 0;
+  const pendingFollowupsList = useMemo(() => followups.filter((f) => f.status !== "COMPLETED"), [followups]);
+
+  // Stage breakdown
+  const stageStats = useMemo(() => {
+    let newCount = 0;
+    let contactedCount = 0;
+    let qualifiedCount = 0;
+    let negotiationCount = 0;
+    let wonCount = 0;
+
+    leads.forEach((l) => {
+      const s = (l.status || "").toUpperCase();
+      if (s.includes("CONVERT") || s.includes("WON") || s.includes("CLOSED")) wonCount++;
+      else if (s.includes("NEGOTIAT") || s.includes("PROP")) negotiationCount++;
+      else if (s.includes("QUALIF")) qualifiedCount++;
+      else if (s.includes("CONTACT")) contactedCount++;
+      else newCount++;
+    });
+
+    return { newCount, contactedCount, qualifiedCount, negotiationCount, wonCount };
+  }, [leads]);
+
   type SalesMenuItem = {
-    id: "leads" | "followups" | "clients" | "sows" | "tasks";
+    id: "dashboard" | "leads" | "followups" | "clients" | "sows" | "tasks";
     label: string;
     icon: React.ComponentType<any>;
     badge?: number;
   };
 
   const menu: SalesMenuItem[] = [
+    { id: "dashboard", label: "Sales Radar", icon: LayoutDashboard },
     { id: "leads", label: "Lead Intelligence", icon: Users, badge: leads.length },
     { id: "followups", label: "Follow-up Queue", icon: CalendarDays, badge: followups.length },
     { id: "sows", label: "Scope of Work (SOW)", icon: ClipboardList },
@@ -267,7 +298,9 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
         <header className={`w-full h-16 shrink-0 border-b flex items-center justify-between px-4 sm:px-6 backdrop-blur-xl ${bgSidebar}`}>
           <div className="flex items-center gap-3">
             <h2 className={`text-lg font-bold tracking-tight capitalize ${dark ? "text-white" : "text-slate-900"}`}>
-              {page === "leads"
+              {page === "dashboard"
+                ? "Sales Radar"
+                : page === "leads"
                 ? "Lead Intelligence"
                 : page === "followups"
                 ? "Follow-up Queue"
@@ -340,6 +373,374 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
               <button onClick={() => setNotice("")} className="opacity-70 hover:opacity-100">
                 <X size={14} />
               </button>
+            </div>
+          )}
+
+          {/* TAB: SALES RADAR DASHBOARD */}
+          {page === "dashboard" && (
+            <div className="space-y-6 max-w-[1600px] mx-auto w-full">
+              {/* Header & Quick Action */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className={`text-2xl font-bold tracking-tight ${dark ? "text-white" : "text-slate-900"}`}>
+                    Sales Radar
+                  </h3>
+                  <p className={`text-xs mt-1 ${mutedText}`}>
+                    Pipeline velocity, actionable client follow-ups, and conversion metrics.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => {
+                      setPage("leads");
+                      setSelectedLead(null);
+                    }}
+                    className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 px-3.5 text-xs font-semibold text-white shadow-sm transition"
+                  >
+                    <Users size={14} />
+                    <span>View Lead Pool</span>
+                  </button>
+                  <button
+                    onClick={() => setPage("followups")}
+                    className={`flex h-9 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition ${
+                      dark ? "border-[#222d42] bg-[#171f30] text-slate-200 hover:bg-[#1e293b]" : "border-[#e5dcd0] bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <CalendarDays size={14} />
+                    <span>Follow-up Queue</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 KPI Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Metric 1: Total Leads */}
+                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Total Pipeline</span>
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      <Target size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                      {totalLeadsCount}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-cyan-400 font-medium">
+                      <span>Active pipeline prospects</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metric 2: Win / Conversion Rate */}
+                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Conversion Rate</span>
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <TrendingUp size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                      {conversionRate}%
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-400 font-medium">
+                      <span>{convertedLeads.length} deals successfully closed</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metric 3: Pending Follow-ups */}
+                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Pending Touches</span>
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <Clock size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                      {pendingFollowupsList.length}
+                    </div>
+                    <div className={`flex items-center gap-1.5 mt-1 text-[11px] font-medium ${pendingFollowupsList.length > 0 ? "text-amber-400" : "text-emerald-400"}`}>
+                      <span>{pendingFollowupsList.length > 0 ? "Requires sales follow-up" : "All touches completed"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metric 4: Corporate Clients */}
+                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Corporate Clients</span>
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                      <Building size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                      {clients.length}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-purple-400 font-medium">
+                      <span>Retained business accounts</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Deal Pipeline Funnel Visualizer */}
+              <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Deal Stage Funnel</h4>
+                    <p className={`text-[11px] ${mutedText}`}>Distribution of prospects across pipeline stages</p>
+                  </div>
+                  <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    {totalLeadsCount} Total Leads
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  {/* Stage 1: New */}
+                  <div className={`p-3 rounded-xl border ${dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"}`}>
+                    <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">1. Discovery / New</div>
+                    <div className="text-xl font-bold font-mono mt-1 text-sky-400">{stageStats.newCount}</div>
+                    <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div
+                        className="h-full bg-sky-400 rounded-full"
+                        style={{ width: `${totalLeadsCount > 0 ? (stageStats.newCount / totalLeadsCount) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stage 2: Contacted */}
+                  <div className={`p-3 rounded-xl border ${dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"}`}>
+                    <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">2. Contacted</div>
+                    <div className="text-xl font-bold font-mono mt-1 text-indigo-400">{stageStats.contactedCount}</div>
+                    <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-400 rounded-full"
+                        style={{ width: `${totalLeadsCount > 0 ? (stageStats.contactedCount / totalLeadsCount) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stage 3: Qualified */}
+                  <div className={`p-3 rounded-xl border ${dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"}`}>
+                    <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">3. Qualified</div>
+                    <div className="text-xl font-bold font-mono mt-1 text-amber-400">{stageStats.qualifiedCount}</div>
+                    <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div
+                        className="h-full bg-amber-400 rounded-full"
+                        style={{ width: `${totalLeadsCount > 0 ? (stageStats.qualifiedCount / totalLeadsCount) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stage 4: Proposal */}
+                  <div className={`p-3 rounded-xl border ${dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"}`}>
+                    <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">4. Proposal / Neg.</div>
+                    <div className="text-xl font-bold font-mono mt-1 text-purple-400">{stageStats.negotiationCount}</div>
+                    <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div
+                        className="h-full bg-purple-400 rounded-full"
+                        style={{ width: `${totalLeadsCount > 0 ? (stageStats.negotiationCount / totalLeadsCount) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Stage 5: Won */}
+                  <div className={`p-3 rounded-xl border ${dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"}`}>
+                    <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">5. Converted / Won</div>
+                    <div className="text-xl font-bold font-mono mt-1 text-emerald-400">{stageStats.wonCount}</div>
+                    <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-400 rounded-full"
+                        style={{ width: `${totalLeadsCount > 0 ? (stageStats.wonCount / totalLeadsCount) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2-Column Split: Hot Prospects & Follow-up Execution */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left Side: Hot Prospects / Recent Leads (7 cols) */}
+                <div className="lg:col-span-7 space-y-6">
+                  <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Flame size={16} className="text-amber-500" />
+                        <div>
+                          <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Active Prospects Radar</h4>
+                          <p className={`text-[11px] ${mutedText}`}>Latest leads entering the pipeline</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setPage("leads");
+                          setSelectedLead(null);
+                        }}
+                        className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                      >
+                        <span>Lead Directory</span>
+                        <ArrowUpRight size={13} />
+                      </button>
+                    </div>
+
+                    {leads.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <Users size={28} className={`mx-auto mb-2 opacity-30 ${mutedText}`} />
+                        <p className={`text-xs ${mutedText}`}>No leads registered in CRM</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {leads.slice(0, 5).map((lead) => (
+                          <div
+                            key={lead.id}
+                            onClick={() => {
+                              setSelectedLead(lead);
+                              setPage("leads");
+                            }}
+                            className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer hover:border-cyan-500/30 transition ${
+                              dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1 pr-3">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-xs font-bold truncate ${dark ? "text-white" : "text-slate-900"}`}>
+                                  {lead.full_name}
+                                </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium shrink-0">
+                                  {lead.source}
+                                </span>
+                              </div>
+                              <div className={`text-[11px] mt-1 flex items-center gap-2 ${mutedText}`}>
+                                <span>{lead.company || "Individual"}</span>
+                                {lead.phone && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{lead.phone}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 capitalize">
+                                {lead.status.replaceAll("_", " ")}
+                              </span>
+                              <ChevronRight size={14} className={mutedText} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Side: Follow-up Queue & Clients (5 cols) */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Today's Follow-up Action Queue */}
+                  <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Action Follow-up Queue</h4>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            {pendingFollowupsList.length}
+                          </span>
+                        </div>
+                        <p className={`text-[11px] ${mutedText}`}>Pending client interactions</p>
+                      </div>
+                      <button
+                        onClick={() => setPage("followups")}
+                        className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                      >
+                        <span>Full Queue</span>
+                        <ArrowUpRight size={13} />
+                      </button>
+                    </div>
+
+                    {pendingFollowupsList.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <CheckCircle2 size={28} className="mx-auto mb-2 text-emerald-400/60" />
+                        <p className="text-xs font-medium text-emerald-400">All follow-ups completed!</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {pendingFollowupsList.slice(0, 5).map((f) => (
+                          <div
+                            key={f.id}
+                            className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+                              dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-semibold truncate">{f.lead_name}</div>
+                              <div className={`text-[10px] mt-0.5 flex items-center gap-2 ${mutedText}`}>
+                                <span className="capitalize font-medium">{f.type}</span>
+                                <span>•</span>
+                                <span>{f.followup_date}</span>
+                                {f.followup_time && <span>({f.followup_time})</span>}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleUpdateFollowupStatus(f.id, "COMPLETED")}
+                              title="Mark as completed"
+                              className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition shrink-0"
+                            >
+                              Done
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Retained Clients Overview */}
+                  <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Client Directory</h4>
+                        <p className={`text-[11px] ${mutedText}`}>Active enterprise relationships</p>
+                      </div>
+                      <button
+                        onClick={() => setPage("clients")}
+                        className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                      >
+                        <span>View All</span>
+                        <ArrowUpRight size={13} />
+                      </button>
+                    </div>
+
+                    {clients.length === 0 ? (
+                      <div className="py-6 text-center">
+                        <Building size={24} className={`mx-auto mb-2 opacity-30 ${mutedText}`} />
+                        <p className={`text-xs ${mutedText}`}>No clients registered yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {clients.slice(0, 4).map((c) => (
+                          <div
+                            key={c.id}
+                            className={`p-2.5 rounded-xl border flex items-center justify-between ${
+                              dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-semibold truncate">{c.name}</div>
+                              <div className={`text-[10px] ${mutedText} truncate`}>{c.company || "Individual"}</div>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 font-mono">
+                              {c.projects?.length || 0} projects
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

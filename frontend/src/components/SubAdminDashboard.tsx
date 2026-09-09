@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, CreditCard, Calculator, Users,
   BellRing, Briefcase, KeyRound, Plus, RefreshCw,
-  Search, ShieldCheck, Sun, Moon, LogOut, CheckCircle2, AlertCircle, X, Megaphone
+  Search, ShieldCheck, Sun, Moon, LogOut, CheckCircle2, AlertCircle, X, Megaphone,
+  LayoutDashboard, TrendingUp, ArrowUpRight, Clock, Wallet
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import DeveloperWorkspace from "./DeveloperWorkspace";
@@ -33,7 +34,7 @@ type Lead = { id: string; full_name: string; company: string | null; email: stri
 type Followup = { id: string; lead_name: string; type: string; followup_date: string; followup_time: string | null; status: string };
 
 export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTheme }: SubAdminDashboardProps) {
-  const [page, setPage] = useState<"invoices" | "sows" | "tasks" | "expenses" | "leads" | "clients" | "developers" | "vault">("invoices");
+  const [page, setPage] = useState<"dashboard" | "invoices" | "sows" | "tasks" | "expenses" | "leads" | "clients" | "developers" | "vault">("dashboard");
   const [dark, setDark] = useState<boolean>(() => {
     if (propDark !== undefined) return propDark;
     if (typeof window !== "undefined") {
@@ -187,7 +188,9 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
   // Summary Metrics
   const totalBilled = useMemo(() => invoices.reduce((s, i) => s + Number(i.total || 0), 0), [invoices]);
   const totalPaid = useMemo(() => invoices.reduce((s, i) => s + Number(i.paid_amount || 0), 0), [invoices]);
+  const pendingAmount = Math.max(0, totalBilled - totalPaid);
   const totalExpenses = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount || 0), 0), [expenses]);
+  const pendingFollowups = useMemo(() => followups.filter((f) => f.status !== "COMPLETED"), [followups]);
 
   // Design Tokens (Nocturne & Ivory Luxury Palette)
   const bgMain = dark ? "bg-[#0c1017] text-[#f1f5f9]" : "bg-[#fbf8f2] text-[#1c1917]";
@@ -201,13 +204,14 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
   }
 
   type SubAdminNavLink = {
-    id: "invoices" | "sows" | "tasks" | "expenses" | "leads" | "clients" | "developers";
+    id: "dashboard" | "invoices" | "sows" | "tasks" | "expenses" | "leads" | "clients" | "developers";
     label: string;
     icon: React.ComponentType<any>;
     badge?: number;
   };
 
   const navLinks: SubAdminNavLink[] = [
+    { id: "dashboard", label: "Operations Command", icon: LayoutDashboard },
     { id: "invoices", label: "Invoices & Billing", icon: FileText, badge: invoices.length },
     { id: "sows", label: "Scope of Work (SOW)", icon: FileText },
     { id: "tasks", label: "Company Tasks", icon: ShieldCheck },
@@ -289,7 +293,9 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
         <header className={`w-full h-16 shrink-0 border-b flex items-center justify-between px-4 sm:px-6 backdrop-blur-xl ${bgSidebar}`}>
           <div className="flex items-center gap-3">
             <h2 className={`text-lg font-bold tracking-tight capitalize ${dark ? "text-white" : "text-slate-900"}`}>
-              {page === "invoices"
+              {page === "dashboard"
+                ? "Operations Command"
+                : page === "invoices"
                 ? "Invoices & Revenue"
                 : page === "sows"
                 ? "Scope of Work (SOW)"
@@ -377,6 +383,352 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
               <button onClick={() => setNotice("")} className="opacity-70 hover:opacity-100">
                 <X size={14} />
               </button>
+            </div>
+          )}
+
+          {/* TAB: OPERATIONS COMMAND DASHBOARD */}
+          {page === "dashboard" && (
+            <div className="space-y-6 max-w-[1600px] mx-auto w-full">
+              {/* Welcome & Quick Action Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className={`text-2xl font-bold tracking-tight ${dark ? "text-white" : "text-slate-900"}`}>
+                    Operations Command
+                  </h3>
+                  <p className={`text-xs mt-1 ${mutedText}`}>
+                    Executive overview of financial flow, follow-up queues, and corporate operations.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setShowAddInvoiceModal(true)}
+                    className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 px-3.5 text-xs font-semibold text-white shadow-sm transition"
+                  >
+                    <Plus size={14} />
+                    <span>Create Invoice</span>
+                  </button>
+                  <button
+                    onClick={() => setShowAddExpenseModal(true)}
+                    className={`flex h-9 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition ${
+                      dark ? "border-[#222d42] bg-[#171f30] text-slate-200 hover:bg-[#1e293b]" : "border-[#e5dcd0] bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Plus size={14} />
+                    <span>Log Expense</span>
+                  </button>
+                  <button
+                    onClick={() => setShowAddClientModal(true)}
+                    className={`flex h-9 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition ${
+                      dark ? "border-[#222d42] bg-[#171f30] text-slate-200 hover:bg-[#1e293b]" : "border-[#e5dcd0] bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <Plus size={14} />
+                    <span>Add Client</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4 Metric Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Metric 1: Total Invoiced */}
+                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Total Invoiced</span>
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      <TrendingUp size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                      ₹{totalBilled.toLocaleString("en-IN")}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-500 font-medium">
+                      <span>{invoices.length} total invoices issued</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metric 2: Pending Settlements */}
+                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Pending Dues</span>
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                      <Clock size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                      ₹{pendingAmount.toLocaleString("en-IN")}
+                    </div>
+                    <div className={`flex items-center gap-1.5 mt-1 text-[11px] font-medium ${pendingAmount > 0 ? "text-amber-500" : "text-emerald-500"}`}>
+                      <span>₹{totalPaid.toLocaleString("en-IN")} collected so far</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metric 3: Operating Expenses */}
+                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Operating Expenses</span>
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                      <Wallet size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                      ₹{totalExpenses.toLocaleString("en-IN")}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-indigo-400 font-medium">
+                      <span>{expenses.length} expense records</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metric 4: Corporate Accounts */}
+                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Active Clients</span>
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                      <Users size={18} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                      {clients.length}
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-cyan-400 font-medium">
+                      <span>{leads.length} active sales leads</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Content Grid: Left 60% / Right 40% */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left Side: Billing & Expenses (7 cols) */}
+                <div className="lg:col-span-7 space-y-6">
+                  {/* Recent Invoices Card */}
+                  <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Recent Billing Activity</h4>
+                        <p className={`text-[11px] ${mutedText}`}>Latest client invoices and payment status</p>
+                      </div>
+                      <button
+                        onClick={() => setPage("invoices")}
+                        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                      >
+                        <span>View Invoices</span>
+                        <ArrowUpRight size={13} />
+                      </button>
+                    </div>
+
+                    {invoices.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <FileText size={28} className={`mx-auto mb-2 opacity-30 ${mutedText}`} />
+                        <p className={`text-xs ${mutedText}`}>No invoices issued yet</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className={`border-b ${dark ? "border-[#1e293b] text-slate-400" : "border-slate-200 text-slate-500"}`}>
+                              <th className="pb-2 font-semibold">Invoice #</th>
+                              <th className="pb-2 font-semibold">Client</th>
+                              <th className="pb-2 font-semibold text-right">Amount</th>
+                              <th className="pb-2 font-semibold text-right">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-inherit">
+                            {invoices.slice(0, 5).map((inv) => {
+                              const total = Number(inv.total || 0);
+                              const paid = Number(inv.paid_amount || 0);
+                              const isPaid = paid >= total && total > 0;
+                              const isPartial = paid > 0 && paid < total;
+
+                              return (
+                                <tr key={inv.id} className={`hover:bg-white/[0.02] transition`}>
+                                  <td className="py-2.5 font-mono font-medium">{inv.invoice_number}</td>
+                                  <td className="py-2.5 font-medium truncate max-w-[140px]">{inv.client_name || "Direct Client"}</td>
+                                  <td className="py-2.5 font-mono text-right font-semibold">₹{total.toLocaleString("en-IN")}</td>
+                                  <td className="py-2.5 text-right">
+                                    <span
+                                      className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        isPaid
+                                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                          : isPartial
+                                          ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                          : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                                      }`}
+                                    >
+                                      {isPaid ? "Paid" : isPartial ? "Partial" : "Pending"}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent Operating Expenses */}
+                  <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Operating Outflows</h4>
+                        <p className={`text-[11px] ${mutedText}`}>Recent office and administrative expenditures</p>
+                      </div>
+                      <button
+                        onClick={() => setPage("expenses")}
+                        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                      >
+                        <span>All Expenses</span>
+                        <ArrowUpRight size={13} />
+                      </button>
+                    </div>
+
+                    {expenses.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <Calculator size={28} className={`mx-auto mb-2 opacity-30 ${mutedText}`} />
+                        <p className={`text-xs ${mutedText}`}>No expenses logged yet</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {expenses.slice(0, 4).map((exp) => (
+                          <div
+                            key={exp.id}
+                            className={`flex items-center justify-between p-3 rounded-xl border ${
+                              dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-indigo-500/10 text-indigo-400 font-bold text-xs">
+                                ₹
+                              </div>
+                              <div>
+                                <div className="text-xs font-semibold leading-tight">{exp.title}</div>
+                                <div className={`text-[10px] mt-0.5 ${mutedText}`}>
+                                  {exp.category} • {exp.payment_method || "UPI"} • {exp.expense_date || "Recent"}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right font-mono text-xs font-bold text-rose-400">
+                              -₹{Number(exp.amount || 0).toLocaleString("en-IN")}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right Side: Actionable Follow-up Queue & Clients (5 cols) */}
+                <div className="lg:col-span-5 space-y-6">
+                  {/* Actionable Follow-up Queue */}
+                  <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Follow-up Queue</h4>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            {pendingFollowups.length}
+                          </span>
+                        </div>
+                        <p className={`text-[11px] ${mutedText}`}>Client & partner pending touches</p>
+                      </div>
+                      <button
+                        onClick={() => setPage("leads")}
+                        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                      >
+                        <span>View Leads</span>
+                        <ArrowUpRight size={13} />
+                      </button>
+                    </div>
+
+                    {pendingFollowups.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <CheckCircle2 size={28} className="mx-auto mb-2 text-emerald-400/60" />
+                        <p className="text-xs font-medium text-emerald-400">All follow-ups are up to date</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {pendingFollowups.slice(0, 4).map((f) => (
+                          <div
+                            key={f.id}
+                            className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
+                              dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-semibold truncate">{f.lead_name}</div>
+                              <div className={`text-[10px] mt-0.5 flex items-center gap-2 ${mutedText}`}>
+                                <span className="capitalize">{f.type || "Call"}</span>
+                                <span>•</span>
+                                <span>{f.followup_date}</span>
+                                {f.followup_time && <span>({f.followup_time})</span>}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleUpdateFollowupStatus(f.id, "COMPLETED")}
+                              title="Mark as completed"
+                              className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition shrink-0"
+                            >
+                              Complete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Corporate Client Directory Snapshot */}
+                  <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Corporate Accounts</h4>
+                        <p className={`text-[11px] ${mutedText}`}>Managed business clients</p>
+                      </div>
+                      <button
+                        onClick={() => setPage("clients")}
+                        className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                      >
+                        <span>All Clients</span>
+                        <ArrowUpRight size={13} />
+                      </button>
+                    </div>
+
+                    {clients.length === 0 ? (
+                      <div className="py-8 text-center">
+                        <Briefcase size={28} className={`mx-auto mb-2 opacity-30 ${mutedText}`} />
+                        <p className={`text-xs ${mutedText}`}>No corporate clients registered</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {clients.slice(0, 4).map((c) => (
+                          <div
+                            key={c.id}
+                            className={`flex items-center justify-between p-3 rounded-xl border ${
+                              dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"
+                            }`}
+                          >
+                            <div>
+                              <div className="text-xs font-semibold">{c.name}</div>
+                              <div className={`text-[10px] mt-0.5 ${mutedText}`}>
+                                {c.company || "Individual"} {c.phone ? `• ${c.phone}` : ""}
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-500/10 border border-slate-500/20">
+                              {c.projects?.length || 0} Projects
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Code2, FolderKanban, Users, Plus, KeyRound, RefreshCw,
   Send, Trash2, CalendarDays, ExternalLink, ShieldCheck, CheckCircle2,
-  Clock, AlertCircle, ChevronRight, X, ArrowLeft, ArrowUpRight, LogOut, Sun, Moon, FileText
+  Clock, AlertCircle, ChevronRight, X, ArrowLeft, ArrowUpRight, LogOut, Sun, Moon, FileText,
+  LayoutDashboard, TrendingUp, Zap, Bug
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import CredentialsVault from "./CredentialsVault";
@@ -58,7 +59,7 @@ export default function DeveloperWorkspace({
   dark?: boolean;
   onToggleTheme?: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"projects" | "daily" | "issues" | "team" | "assign" | "vault" | "sows">("projects");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "projects" | "daily" | "issues" | "team" | "assign" | "vault" | "sows">("dashboard");
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeDeveloperId, setActiveDeveloperId] = useState<string | null>(null);
@@ -481,13 +482,14 @@ export default function DeveloperWorkspace({
   const mutedText = dark ? "text-[#8e9bb0]" : "text-[#78716c]";
 
   type NavItem = {
-    id: "projects" | "daily" | "issues" | "team" | "assign" | "vault" | "sows";
+    id: "dashboard" | "projects" | "daily" | "issues" | "team" | "assign" | "vault" | "sows";
     label: string;
     icon: React.ComponentType<any>;
     badge?: number;
   };
 
   const navigationItems: NavItem[] = [
+    { id: "dashboard", label: "Dev Pulse", icon: LayoutDashboard },
     { id: "projects", label: admin ? "All Projects" : "My Projects", icon: FolderKanban, badge: projects.length },
     ...(admin && !subAdmin ? [{ id: "daily", label: "Daily Updates", icon: CalendarDays, badge: dailyUpdatesList.length } as NavItem] : []),
     ...(!admin ? [{ id: "sows", label: "Scope of Work (SOW)", icon: FileText } as NavItem] : []),
@@ -512,8 +514,401 @@ export default function DeveloperWorkspace({
         </div>
       )}
 
+      {/* TAB 0: ENGINEERING PULSE DASHBOARD */}
+      {activeTab === "dashboard" && (
+        <div className="space-y-6 max-w-[1600px] mx-auto w-full">
+          {/* Header & Quick Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className={`text-2xl font-bold tracking-tight ${dark ? "text-white" : "text-slate-900"}`}>
+                Engineering Pulse
+              </h3>
+              <p className={`text-xs mt-1 ${mutedText}`}>
+                {admin
+                  ? "Sprint velocity, project lifecycles, and engineering health."
+                  : "Live sprint track, deliverables velocity, active bugs, and standup tracking."}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {admin ? (
+                <button
+                  onClick={() => setActiveTab("assign")}
+                  className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 px-3.5 text-xs font-semibold text-white shadow-sm transition"
+                >
+                  <Plus size={14} />
+                  <span>Assign Project</span>
+                </button>
+              ) : (
+                <>
+                  {!subAdmin && (
+                    <button
+                      onClick={() => setShowIssueModal(true)}
+                      className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 px-3.5 text-xs font-semibold text-white shadow-sm transition"
+                    >
+                      <Plus size={14} />
+                      <span>Report Bug</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setActiveTab("daily")}
+                    className={`flex h-9 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition ${
+                      dark ? "border-[#222d42] bg-[#171f30] text-slate-200 hover:bg-[#1e293b]" : "border-[#e5dcd0] bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <CalendarDays size={14} />
+                    <span>Daily Standup</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* 4 KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Metric 1: Active In Progress */}
+            <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Active Deliveries</span>
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  <FolderKanban size={18} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                  {activeProjects}
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-cyan-400 font-medium">
+                  <span>{projects.length} total projects assigned</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Metric 2: Delivery Velocity */}
+            <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Sprint Velocity</span>
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <TrendingUp size={18} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                  {averageProgress}%
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-400 font-medium">
+                  <span>{completedProjects} projects shipped</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Metric 3: Open Issues / Bugs */}
+            <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Unresolved Bugs</span>
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <AlertCircle size={18} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                  {issuesList.filter((i) => i.status !== "RESOLVED").length}
+                </div>
+                <div className={`flex items-center gap-1.5 mt-1 text-[11px] font-medium ${
+                  issuesList.filter((i) => i.status !== "RESOLVED" && (i.priority === "URGENT" || i.priority === "HIGH")).length > 0
+                    ? "text-rose-400"
+                    : "text-emerald-400"
+                }`}>
+                  <span>
+                    {issuesList.filter((i) => i.status !== "RESOLVED" && (i.priority === "URGENT" || i.priority === "HIGH")).length} critical priority
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Metric 4: Standup Activity */}
+            <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Standup Logs</span>
+                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  <CalendarDays size={18} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+                  {dailyUpdatesList.length}
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-indigo-400 font-medium">
+                  <span>Logged developer standups</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2-Column Split: Active Projects & Bug Radar */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left Side: Active Sprints & Standup Feed (7 cols) */}
+            <div className="lg:col-span-7 space-y-6">
+              {/* Active Projects Tracker */}
+              <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Current Project Sprints</h4>
+                    <p className={`text-[11px] ${mutedText}`}>Assigned deliverables and milestone completion</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("projects")}
+                    className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                  >
+                    <span>All Projects</span>
+                    <ArrowUpRight size={13} />
+                  </button>
+                </div>
+
+                {projects.length === 0 ? (
+                  <div className="py-8 text-center">
+                    <FolderKanban size={28} className={`mx-auto mb-2 opacity-30 ${mutedText}`} />
+                    <p className={`text-xs ${mutedText}`}>No assigned projects found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {projects.slice(0, 4).map((p) => {
+                      const prog = Number(p.progress ?? (p.status === "COMPLETED" ? 100 : 0));
+                      return (
+                        <div
+                          key={p.id}
+                          onClick={() => {
+                            selectProject(p);
+                            setActiveTab("projects");
+                          }}
+                          className={`p-3.5 rounded-xl border cursor-pointer hover:border-indigo-500/30 transition ${
+                            dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <h5 className={`text-xs font-bold truncate ${dark ? "text-white" : "text-slate-900"}`}>
+                                  {p.name}
+                                </h5>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${
+                                  p.priority === "URGENT" || p.priority === "HIGH"
+                                    ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                    : "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                                }`}>
+                                  {p.priority}
+                                </span>
+                              </div>
+                              <div className={`text-[10px] mt-0.5 ${mutedText}`}>
+                                {p.client_name ? `Client: ${p.client_name}` : "Internal Project"}
+                                {p.due_date ? ` • Due: ${p.due_date}` : ""}
+                              </div>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              p.status === "COMPLETED"
+                                ? "bg-emerald-500/10 text-emerald-400"
+                                : p.status === "IN_PROGRESS"
+                                ? "bg-cyan-500/10 text-cyan-400"
+                                : "bg-slate-500/10 text-slate-400"
+                            }`}>
+                              {p.status.replace("_", " ")}
+                            </span>
+                          </div>
+
+                          {/* Progress bar */}
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between text-[10px] mb-1">
+                              <span className={mutedText}>Sprint Progress</span>
+                              <span className="font-mono font-bold">{prog}%</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  prog >= 80 ? "bg-emerald-400" : prog >= 40 ? "bg-indigo-400" : "bg-cyan-400"
+                                }`}
+                                style={{ width: `${prog}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Standup Submissions */}
+              <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Recent Standup Logs</h4>
+                    <p className={`text-[11px] ${mutedText}`}>Engineering daily progress & roadblocks</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("daily")}
+                    className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                  >
+                    <span>All Standups</span>
+                    <ArrowUpRight size={13} />
+                  </button>
+                </div>
+
+                {dailyUpdatesList.length === 0 ? (
+                  <div className="py-6 text-center">
+                    <CalendarDays size={24} className={`mx-auto mb-2 opacity-30 ${mutedText}`} />
+                    <p className={`text-xs ${mutedText}`}>No standups logged yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {dailyUpdatesList.slice(0, 3).map((up) => (
+                      <div
+                        key={up.id}
+                        className={`p-3 rounded-xl border ${
+                          dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-indigo-400">{up.developer_name}</span>
+                          <span className={`text-[10px] ${mutedText}`}>{up.hours_worked || 8} hrs logged</span>
+                        </div>
+                        <div className="mt-1.5 text-xs">
+                          <span className={`text-[10px] uppercase font-bold text-slate-400 mr-1.5`}>Done:</span>
+                          <span className="text-slate-300">{up.completed_today || "Tasks completed"}</span>
+                        </div>
+                        {up.blocked && up.blocked.toLowerCase() !== "none" && (
+                          <div className="mt-1 text-[11px] text-rose-400 flex items-center gap-1">
+                            <span className="font-bold">Blocker:</span>
+                            <span>{up.blocked}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Side: Unresolved Bug Radar & Shortcuts (5 cols) */}
+            <div className="lg:col-span-5 space-y-6">
+              {/* Unresolved Bug Radar */}
+              <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className={`text-sm font-bold ${dark ? "text-white" : "text-slate-900"}`}>Active Bug Radar</h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        {issuesList.filter((i) => i.status !== "RESOLVED").length}
+                      </span>
+                    </div>
+                    <p className={`text-[11px] ${mutedText}`}>Unresolved issues needing attention</p>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("issues")}
+                    className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                  >
+                    <span>Full Tracker</span>
+                    <ArrowUpRight size={13} />
+                  </button>
+                </div>
+
+                {issuesList.filter((i) => i.status !== "RESOLVED").length === 0 ? (
+                  <div className="py-8 text-center">
+                    <CheckCircle2 size={28} className="mx-auto mb-2 text-emerald-400/60" />
+                    <p className="text-xs font-medium text-emerald-400">Zero open blockers. Clean build!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {issuesList
+                      .filter((i) => i.status !== "RESOLVED")
+                      .slice(0, 5)
+                      .map((issue) => (
+                        <div
+                          key={issue.id}
+                          onClick={() => {
+                            setSelectedIssue(issue);
+                            setActiveTab("issues");
+                          }}
+                          className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer hover:border-amber-500/30 transition ${
+                            dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold truncate">{issue.title}</div>
+                            <div className={`text-[10px] mt-0.5 flex items-center gap-2 ${mutedText}`}>
+                              <span>{issue.project_name || "Engineering"}</span>
+                              <span>•</span>
+                              <span className={`font-semibold ${
+                                issue.priority === "URGENT" || issue.priority === "HIGH" ? "text-rose-400" : "text-slate-400"
+                              }`}>
+                                {issue.priority}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+                            {issue.type}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Developer Tooling Shortcuts */}
+              <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                <h4 className={`text-sm font-bold mb-1 ${dark ? "text-white" : "text-slate-900"}`}>Developer Shortcuts</h4>
+                <p className={`text-[11px] mb-4 ${mutedText}`}>Quick navigation to workspace utilities</p>
+
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setActiveTab("projects")}
+                    className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-left transition ${
+                      dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <FolderKanban size={15} className="text-cyan-400" />
+                      <span className="text-xs font-semibold">Browse Projects & Tasks</span>
+                    </div>
+                    <ChevronRight size={14} className={mutedText} />
+                  </button>
+
+                  {!admin && (
+                    <button
+                      onClick={() => setActiveTab("sows")}
+                      className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-left transition ${
+                        dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <FileText size={15} className="text-indigo-400" />
+                        <span className="text-xs font-semibold">Scope of Work (SOWs)</span>
+                      </div>
+                      <ChevronRight size={14} className={mutedText} />
+                    </button>
+                  )}
+
+                  {!subAdmin && (
+                    <button
+                      onClick={() => setActiveTab("vault")}
+                      className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-left transition ${
+                        dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <KeyRound size={15} className="text-amber-400" />
+                        <span className="text-xs font-semibold">Credentials & API Vault</span>
+                      </div>
+                      <ChevronRight size={14} className={mutedText} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TAB 1: PROJECTS */}
-          {activeTab === "projects" && (
+      {activeTab === "projects" && (
             <div className="space-y-6 max-w-[1600px] mx-auto w-full">
               {/* TOP STATS CARDS */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1782,7 +2177,9 @@ export default function DeveloperWorkspace({
             <header className={`w-full h-16 shrink-0 border-b flex items-center justify-between px-4 sm:px-6 backdrop-blur-xl ${bgSidebar}`}>
               <div className="flex items-center gap-3">
                 <h2 className={`text-lg font-bold tracking-tight capitalize ${dark ? "text-white" : "text-slate-900"}`}>
-                  {activeTab === "projects"
+                  {activeTab === "dashboard"
+                    ? "Engineering Pulse"
+                    : activeTab === "projects"
                     ? "Projects & Tasks"
                     : activeTab === "daily"
                     ? "Daily Developer Updates"
