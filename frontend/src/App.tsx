@@ -997,8 +997,8 @@ if (userRole === "DIGITAL_MARKETING") {
 
           <div className="flex items-center gap-3">
             {/* New dropdown */}
-            <div className="relative">
-              <button onClick={()=> setNewDropdownOpen(!newDropdownOpen)} className={`shine-btn h-10 px-4 rounded-xl border flex items-center gap-2 text-[13px] font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] ${
+            <div className="relative header-new-dropdown">
+              <button onClick={()=> setNewDropdownOpen(!newDropdownOpen)} className={`header-new-btn shine-btn h-10 px-4 rounded-xl border flex items-center gap-2 text-[13px] font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] ${
                 isDark 
                   ? "bg-[#171f30] text-[#cca45f] border-[#cca45f]/40 hover:bg-[#1f2940] shadow-md shadow-[#cca45f]/5" 
                   : "bg-[#1c1917] text-[#faf6ee] border-[#1c1917] hover:bg-[#292524] shadow-md"

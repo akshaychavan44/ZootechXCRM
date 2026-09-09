@@ -136,6 +136,20 @@ html:not(.dark), html:not(.dark) body {
   animation: shimmer-sweep 0.85s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Super Admin top header 'New' dropdown & button: hide when any box/modal is open to view */
+.header-new-dropdown {
+  transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+}
+
+body:has(.backdrop-blur-sm) .header-new-dropdown,
+body:has([class*="backdrop-blur-sm"]) .header-new-dropdown,
+body:has([class*="fixed"][class*="inset-0"]:not(.z-10)) .header-new-dropdown {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: scale(0.95);
+}
+
 /* Luxury Application Container & Ambient Lighting */
 .luxury-app {
   letter-spacing: -0.01em;
