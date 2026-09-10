@@ -12,11 +12,13 @@ import CredentialsVault from "./CredentialsVault";
 import ScopeOfWorkWorkspace from "./ScopeOfWorkWorkspace";
 import UniversalTasksWorkspace from "./UniversalTasksWorkspace";
 import DigitalMarketingWorkspace from "./DigitalMarketingWorkspace";
+import UsersManagement from "./UsersManagement";
 
 interface SubAdminDashboardProps {
   onLogout: () => void;
   dark?: boolean;
   onToggleTheme?: () => void;
+  currentUser?: any;
 }
 
 type Client = {
@@ -33,8 +35,8 @@ type Payment = { id: string; invoice_number: string; amount: string | number; me
 type Lead = { id: string; full_name: string; company: string | null; email: string | null; phone: string | null; status: string };
 type Followup = { id: string; lead_name: string; type: string; followup_date: string; followup_time: string | null; status: string };
 
-export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTheme }: SubAdminDashboardProps) {
-  const [page, setPage] = useState<"dashboard" | "invoices" | "sows" | "tasks" | "expenses" | "leads" | "clients" | "developers" | "vault">("dashboard");
+export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTheme, currentUser }: SubAdminDashboardProps) {
+  const [page, setPage] = useState<"dashboard" | "users" | "invoices" | "sows" | "tasks" | "expenses" | "leads" | "clients" | "developers" | "vault">("dashboard");
   const [dark, setDark] = useState<boolean>(() => {
     if (propDark !== undefined) return propDark;
     if (typeof window !== "undefined") {
@@ -99,6 +101,24 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
     paidAmount: "0",
     dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
   });
+
+  const handleOpenAddInvoiceModal = () => {
+    setInvoiceForm({
+      invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+      clientId: "",
+      total: "",
+      paidAmount: "0",
+      dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+    });
+    setShowAddInvoiceModal(true);
+  };
+
+  const getClientDisplayName = (inv: Invoice) => {
+    if (inv.client_name && inv.client_name !== "Client") return inv.client_name;
+    const match = clients.find((c) => c.id === (inv as any).client_id);
+    if (match) return match.company || match.name;
+    return inv.client_name || "Direct Client";
+  };
   const [expenseForm, setExpenseForm] = useState({
     title: "",
     category: "Operations",
@@ -175,6 +195,9 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to save record");
+      if (path === "/api/invoices" && data.data) {
+        setInvoices((prev) => [data.data, ...prev.filter((i) => i.id !== data.data.id)]);
+      }
       onSuccess();
       setNotice("Record successfully saved.");
       await load();
@@ -204,7 +227,7 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
   }
 
   type SubAdminNavLink = {
-    id: "dashboard" | "invoices" | "sows" | "tasks" | "expenses" | "leads" | "clients" | "developers";
+    id: "dashboard" | "users" | "invoices" | "sows" | "tasks" | "expenses" | "leads" | "clients" | "developers";
     label: string;
     icon: React.ComponentType<any>;
     badge?: number;
@@ -212,11 +235,12 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
 
   const navLinks: SubAdminNavLink[] = [
     { id: "dashboard", label: "Operations Command", icon: LayoutDashboard },
+    { id: "users", label: "Team Users", icon: Users },
     { id: "invoices", label: "Invoices & Billing", icon: FileText, badge: invoices.length },
     { id: "sows", label: "Scope of Work (SOW)", icon: FileText },
     { id: "tasks", label: "Company Tasks", icon: ShieldCheck },
     { id: "expenses", label: "Expenses", icon: Calculator, badge: expenses.length },
-    { id: "leads", label: "Shared Leads & Follow-ups", icon: Users, badge: leads.length },
+    { id: "leads", label: "Shared Leads & Follow-ups", icon: Briefcase, badge: leads.length },
     { id: "clients", label: "Client Directory", icon: Briefcase, badge: clients.length },
     { id: "developers", label: "Developers & Projects", icon: Briefcase },
   ];
@@ -276,7 +300,16 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
         </nav>
 
         {/* Footer actions */}
-        <div className="p-4 border-t border-inherit space-y-2">
+        <div className="p-4 border-t border-inherit space-y-3">
+          <div className="flex items-center gap-2.5 px-2 py-1">
+            <div className="h-8 w-8 rounded-lg bg-indigo-600/20 text-indigo-400 font-bold flex items-center justify-center text-xs border border-indigo-500/30 shrink-0">
+              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "S"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold truncate leading-tight">{currentUser?.name || "Sub Admin"}</p>
+              <p className={`text-[10px] truncate leading-tight ${mutedText}`}>{currentUser?.email || "subadmin@zootechx.com"}</p>
+            </div>
+          </div>
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"
@@ -295,6 +328,8 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
             <h2 className={`text-lg font-bold tracking-tight capitalize ${dark ? "text-white" : "text-slate-900"}`}>
               {page === "dashboard"
                 ? "Operations Command"
+                : page === "users"
+                ? "Team & User Management"
                 : page === "invoices"
                 ? "Invoices & Revenue"
                 : page === "sows"
@@ -401,7 +436,7 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
-                    onClick={() => setShowAddInvoiceModal(true)}
+                    onClick={handleOpenAddInvoiceModal}
                     className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 px-3.5 text-xs font-semibold text-white shadow-sm transition"
                   >
                     <Plus size={14} />
@@ -424,6 +459,15 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
                   >
                     <Plus size={14} />
                     <span>Add Client</span>
+                  </button>
+                  <button
+                    onClick={() => setPage("users")}
+                    className={`flex h-9 items-center gap-2 rounded-xl border px-3.5 text-xs font-semibold transition ${
+                      dark ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20" : "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                    }`}
+                  >
+                    <Users size={14} />
+                    <span>Provision User</span>
                   </button>
                 </div>
               </div>
@@ -549,7 +593,7 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
                               return (
                                 <tr key={inv.id} className={`hover:bg-white/[0.02] transition`}>
                                   <td className="py-2.5 font-mono font-medium">{inv.invoice_number}</td>
-                                  <td className="py-2.5 font-medium truncate max-w-[140px]">{inv.client_name || "Direct Client"}</td>
+                                  <td className="py-2.5 font-medium truncate max-w-[140px]">{getClientDisplayName(inv)}</td>
                                   <td className="py-2.5 font-mono text-right font-semibold">₹{total.toLocaleString("en-IN")}</td>
                                   <td className="py-2.5 text-right">
                                     <span
@@ -741,7 +785,7 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
                   <p className={`text-xs mt-1 ${mutedText}`}>Manage company billing and client payment records.</p>
                 </div>
                 <button
-                  onClick={() => setShowAddInvoiceModal(true)}
+                  onClick={handleOpenAddInvoiceModal}
                   className="flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-xs font-semibold text-white shadow hover:bg-indigo-700"
                 >
                   <Plus size={16} />
@@ -767,7 +811,7 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
                         return (
                           <tr key={inv.id} className={`hover:${dark ? "bg-[#171f30]/60" : "bg-[#f6f1e7]"} transition`}>
                             <td className={`p-3.5 text-xs font-mono font-semibold ${dark ? "text-[#cca45f]" : "text-[#a07432]"}`}>{inv.invoice_number}</td>
-                            <td className={`p-3.5 text-xs font-medium ${dark ? "text-[#f1f5f9]" : "text-[#1c1917]"}`}>{inv.client_name}</td>
+                            <td className={`p-3.5 text-xs font-medium ${dark ? "text-[#f1f5f9]" : "text-[#1c1917]"}`}>{getClientDisplayName(inv)}</td>
                             <td className={`p-3.5 text-xs font-mono font-bold text-right ${dark ? "text-[#f1f5f9]" : "text-[#1c1917]"}`}>
                               ₹{Number(inv.total).toLocaleString()}
                             </td>
@@ -976,7 +1020,14 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
           {/* TAB 8: COMPANY TASKS */}
           {page === "tasks" && (
             <div className="max-w-[1600px] mx-auto w-full">
-              <UniversalTasksWorkspace dark={dark} canCreate={true} canUpdateStatus={false} />
+              <UniversalTasksWorkspace dark={dark} canCreate={true} canUpdateStatus={true} />
+            </div>
+          )}
+
+          {/* TAB: TEAM & USER MANAGEMENT */}
+          {page === "users" && (
+            <div className="max-w-[1600px] mx-auto w-full">
+              <UsersManagement dark={dark} isSubAdmin={true} />
             </div>
           )}
         </main>
@@ -995,16 +1046,28 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  const selectedClient = clients.find((c) => c.id === invoiceForm.clientId);
+                  const clientName = selectedClient ? (selectedClient.company || selectedClient.name) : undefined;
                   void saveRecord(
                     "/api/invoices",
                     {
                       invoiceNumber: invoiceForm.invoiceNumber,
                       clientId: invoiceForm.clientId,
+                      clientName,
                       total: Number(invoiceForm.total),
                       paidAmount: Number(invoiceForm.paidAmount),
                       dueDate: new Date(invoiceForm.dueDate).toISOString(),
                     },
-                    () => setShowAddInvoiceModal(false)
+                    () => {
+                      setShowAddInvoiceModal(false);
+                      setInvoiceForm({
+                        invoiceNumber: `INV-${Date.now().toString().slice(-6)}`,
+                        clientId: "",
+                        total: "",
+                        paidAmount: "0",
+                        dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+                      });
+                    }
                   );
                 }}
                 className="space-y-3"

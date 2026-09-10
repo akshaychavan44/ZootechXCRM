@@ -26,7 +26,7 @@ import {
   Phone, MessageCircle, Mail, Calendar, MapPin, TrendingUp, TrendingDown, Clock,
   Check, AlertCircle, ArrowLeft, Save, Wand2, Sparkles, Bot, Filter, KeyRound,
   Download, Edit3, Trash2, MoreHorizontal, ChevronRight, Briefcase, Home, Store, Factory, LandPlot,
-  LogOut, Crown, CheckCircle2, CheckSquare, Shield, Megaphone
+  LogOut, Crown, CheckCircle2, CheckSquare, Shield, Megaphone, ShieldCheck
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -148,8 +148,54 @@ const toNotification = (notification: ApiNotification): AppNotification => {
     createdAt: notification.created_at,
   };
 };
-type ApiInvoice = { id: string; invoice_number: string; client_id: string; client_name: string; total: string | number; paid_amount: string | number; due_date: string; created_at: string; created_by_name?: string | null };
-const toInvoice = (invoice: ApiInvoice): Invoice => ({ id: invoice.id, number: invoice.invoice_number, clientId: invoice.client_id, clientName: invoice.client_name, date: invoice.created_at.slice(0, 10), dueDate: invoice.due_date.slice(0, 10), placeOfSupply: "27-Maharashtra", items: [], subtotal: Number(invoice.total), total: Number(invoice.total), gstTotal: 0, cgst: 0, sgst: 0, igst: 0, status: Number(invoice.paid_amount) >= Number(invoice.total) ? "Paid" : "Sent", amountPaid: Number(invoice.paid_amount), createdByName: invoice.created_by_name });
+type ApiInvoice = { id: string; invoice_number: string; client_id: string; client_name: string; total: string | number; paid_amount: string | number; due_date: string; created_at: string; created_by_name?: string | null; items?: any[] };
+const toInvoice = (invoice: ApiInvoice): Invoice => {
+  const hasItems = Array.isArray((invoice as any).items) && (invoice as any).items.length > 0;
+  const items: InvoiceItem[] = hasItems
+    ? (invoice as any).items.map((it: any, idx: number) => ({
+        id: it.id || String(idx + 1),
+        name: it.name || "Item",
+        hsn: it.hsn || "9983",
+        qty: Number(it.qty) || 1,
+        unit: it.unit || "Nos",
+        rate: Number(it.rate) || 0,
+        discount: Number(it.discount) || 0,
+        gst: Number(it.gst) ?? 18,
+      }))
+    : [
+        {
+          id: "item-1",
+          name: "Professional Services",
+          hsn: "998313",
+          qty: 1,
+          unit: "Job",
+          rate: Number(invoice.total),
+          discount: 0,
+          gst: 0,
+        },
+      ];
+  const subtotal = items.reduce((acc, it) => acc + (it.qty * it.rate * (1 - (it.discount || 0) / 100)), 0);
+  const gstTotal = items.reduce((acc, it) => acc + (it.qty * it.rate * (1 - (it.discount || 0) / 100) * ((it.gst || 0) / 100)), 0);
+  return {
+    id: invoice.id,
+    number: invoice.invoice_number,
+    clientId: invoice.client_id,
+    clientName: invoice.client_name || (invoice as any).clientName || "Client",
+    date: invoice.created_at ? invoice.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    dueDate: invoice.due_date ? invoice.due_date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    placeOfSupply: "27-Maharashtra",
+    items,
+    subtotal: hasItems ? subtotal : Number(invoice.total),
+    total: Number(invoice.total),
+    gstTotal: hasItems ? gstTotal : 0,
+    cgst: hasItems ? gstTotal / 2 : 0,
+    sgst: hasItems ? gstTotal / 2 : 0,
+    igst: 0,
+    status: Number(invoice.paid_amount) >= Number(invoice.total) ? "Paid" : "Sent",
+    amountPaid: Number(invoice.paid_amount),
+    createdByName: invoice.created_by_name
+  };
+};
 type FinanceExpense = { id: string; title: string; category: string; amount: string | number; expense_date: string | null; payment_method: string | null };
 type FinancePayment = { id: string; invoice_number: string; amount: string | number; method: string; created_at: string };
 
@@ -166,6 +212,7 @@ export default function App() {
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState("");
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
   const [isDark, setIsDark] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -286,6 +333,7 @@ export default function App() {
         if (!response.ok || !data.user) throw new Error("Invalid session");
         const user = data.user as AuthUser;
         localStorage.setItem("zootechx_user", JSON.stringify(user));
+        setCurrentUser(user);
         setUserRole(user.role);
         setIsLoggedIn(true);
       } catch {
@@ -321,14 +369,15 @@ export default function App() {
     loadCrmData();
   }, [isLoggedIn]);
 
-  // Real-time notification poller (polls every 6 seconds for live CRM events)
+  // Real-time notification & invoice poller for live CRM events
   useEffect(() => {
     if (!isLoggedIn) return;
     const pollNotifications = async () => {
       try {
-        const [response, fuRes] = await Promise.all([
+        const [response, fuRes, invRes] = await Promise.all([
           apiFetch("/api/notifications"),
-          apiFetch("/api/followups")
+          apiFetch("/api/followups"),
+          userRole === "SUPER_ADMIN" ? apiFetch("/api/invoices") : Promise.resolve(null),
         ]);
         if (response.ok) {
           const resJson = await response.json();
@@ -342,11 +391,17 @@ export default function App() {
             setFollowUps(fuJson.data.map(toFollowUp));
           }
         }
+        if (invRes && invRes.ok) {
+          const invJson = await invRes.json();
+          if (Array.isArray(invJson.data)) {
+            setInvoices(invJson.data.map(toInvoice));
+          }
+        }
       } catch {}
     };
     const pollInterval = setInterval(pollNotifications, 4000);
     return () => clearInterval(pollInterval);
-  }, [isLoggedIn]);
+  }, [isLoggedIn, userRole]);
 
   // Dismiss notification popover when clicking outside
   useEffect(() => {
@@ -806,7 +861,18 @@ export default function App() {
     };
     try {
       if (!inv.clientId) throw new Error("Choose a client before saving an invoice");
-      const response = await apiFetch("/api/invoices", { method: "POST", body: JSON.stringify({ invoiceNumber: inv.number, clientId: inv.clientId, clientName: inv.clientName, total: inv.total, paidAmount: inv.amountPaid, dueDate: new Date(inv.dueDate).toISOString() }) });
+      const response = await apiFetch("/api/invoices", {
+        method: "POST",
+        body: JSON.stringify({
+          invoiceNumber: inv.number,
+          clientId: inv.clientId,
+          clientName: inv.clientName,
+          total: inv.total,
+          paidAmount: inv.amountPaid,
+          dueDate: new Date(inv.dueDate).toISOString(),
+          items: inv.items,
+        }),
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Unable to save invoice");
       setInvoices([{ ...inv, id: data.data.id, createdByName: data.data.created_by_name ?? null }, ...invoices]);
@@ -849,6 +915,7 @@ export default function App() {
     localStorage.removeItem("zootechx_user");
     setIsLoggedIn(false);
     setUserRole("");
+    setCurrentUser(null);
   };
   const exportCsv = (filename: string, rows: Array<Record<string, string | number>>) => {
     if (!rows.length) return;
@@ -871,6 +938,7 @@ if (!isLoggedIn) {
   return (
     <Login
       onLoginSuccess={(token, user) => {
+        setCurrentUser(user as AuthUser);
         setIsLoggedIn(true);
         setUserRole(user.role);
       }}
@@ -878,14 +946,14 @@ if (!isLoggedIn) {
   );
 }
 if (userRole === "SALES") {
-  return <SalesDashboard onLogout={logout} dark={isDark} onToggleTheme={toggleTheme} />;
+  return <SalesDashboard onLogout={logout} dark={isDark} onToggleTheme={toggleTheme} currentUser={currentUser} />;
 }
 if (userRole === "DEVELOPER") {
-  return <DeveloperWorkspace onLogout={logout} dark={isDark} onToggleTheme={toggleTheme} />;
+  return <DeveloperWorkspace onLogout={logout} dark={isDark} onToggleTheme={toggleTheme} currentUser={currentUser} />;
 }
 if (userRole === "SUB_ADMIN") {
   return (
-    <SubAdminDashboard onLogout={logout} dark={isDark} onToggleTheme={toggleTheme} />
+    <SubAdminDashboard onLogout={logout} dark={isDark} onToggleTheme={toggleTheme} currentUser={currentUser} />
   );
 }
 if (userRole === "DIGITAL_MARKETING") {
@@ -894,6 +962,7 @@ if (userRole === "DIGITAL_MARKETING") {
       onLogout={logout}
       dark={isDark}
       onToggleTheme={toggleTheme}
+      currentUser={currentUser}
     />
   );
 }
@@ -934,6 +1003,7 @@ if (userRole === "DIGITAL_MARKETING") {
             { id:"developers", label:"Developers & Projects", icon:Briefcase },
             { id:"payments", label:"Payments", icon:CreditCard },
             { id:"tasks", label:"Company Tasks", icon:CheckSquare },
+            { id:"users", label:"Team & Users", icon:ShieldCheck },
             { id:"audit-logs", label:"Audit Logs", icon:Shield },
             { id:"vault", label:"Credentials Vault", icon:KeyRound },
             { id:"settings", label:"Admin Settings", icon:Settings },
@@ -956,7 +1026,16 @@ if (userRole === "DIGITAL_MARKETING") {
             )
           })}
         </nav>
-        <div className={`p-3 border-t ${borderC} space-y-1`}>
+        <div className={`p-3 border-t ${borderC} space-y-2`}>
+          <div className="flex items-center gap-2.5 px-2 py-1">
+            <div className="h-8 w-8 rounded-lg bg-amber-600/20 text-[#cca45f] font-bold flex items-center justify-center text-xs border border-amber-500/30 shrink-0">
+              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "A"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold truncate leading-tight">{currentUser?.name || "Super Admin"}</p>
+              <p className={`text-[10px] truncate leading-tight ${textMuted}`}>{currentUser?.email || "admin@zootechx.com"}</p>
+            </div>
+          </div>
           <button onClick={logout} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] font-medium transition ${isDark ? "text-rose-400 hover:text-rose-300 hover:bg-rose-500/10" : "text-rose-600 hover:text-rose-700 hover:bg-rose-50"}`}><LogOut size={18}/>Sign out</button>
         </div>
       </aside>
@@ -1009,6 +1088,7 @@ if (userRole === "DIGITAL_MARKETING") {
                 <div className={`absolute right-0 top-12 w-60 rounded-3xl border shadow-2xl z-30 p-2 ${bgCard} backdrop-blur-2xl`}>
                   {[
                     { label:"New Invoice", desc:"Create GST invoice", icon:FileText, action:()=> { setCurrentPage("invoices/new"); setNewDropdownOpen(false);} },
+                    { label:"Provision User", desc:"Create sales or team login", icon:Users, action:()=> { setSettingsTab("users"); setCurrentPage("settings"); setNewDropdownOpen(false);} },
                     { label:"New Client", desc:"Add enterprise client", icon:UserPlus, action:()=> { setShowCreateClient(true); setClientModalError(null); setNewDropdownOpen(false);} },
                     { label:"New Lead", desc:"Add potential client", icon:UserPlus, action:()=> { setShowAddLead(true); setNewDropdownOpen(false);} },
                     { label:"Scope of Work", desc:"Draft & send SOW proposal", icon:FileText, action:()=> { setCurrentPage("sows"); setNewDropdownOpen(false);} },
@@ -1676,7 +1756,14 @@ if (userRole === "DIGITAL_MARKETING") {
                       {invoices.map(inv=> (
                         <tr key={inv.id} className={`hover:${isDark ? "bg-[#171f30]/60" : "bg-[#f6f1e7]"} transition`}>
                           <td className={`p-3.5 font-bold mono ${isDark ? "text-[#cca45f]" : "text-[#a07432]"}`}>{inv.number}</td>
-                          <td className={`p-3.5 font-medium ${textPrimary}`}>{inv.clientName}</td>
+                          <td className={`p-3.5 font-medium ${textPrimary}`}>
+                            {inv.clientName && inv.clientName !== "Client"
+                              ? inv.clientName
+                              : clients.find((c) => c.id === inv.clientId)?.businessName ||
+                                clients.find((c) => c.id === inv.clientId)?.name ||
+                                inv.clientName ||
+                                "Client"}
+                          </td>
                           <td className={`p-3.5 font-mono ${textMuted}`}>{inv.date}</td>
                           <td className={`p-3.5 text-right font-bold font-mono ${textPrimary}`}>₹{inv.total.toLocaleString()}</td>
                           <td className={`p-3.5 text-right font-mono ${textMuted}`}>₹{inv.gstTotal.toLocaleString()}</td>
@@ -1850,7 +1937,36 @@ if (userRole === "DIGITAL_MARKETING") {
             <QuotationsPage>
             <div className="max-w-[1600px] mx-auto space-y-4">
               <div className="flex items-center justify-between"><div><h1 className={`text-[22px] font-bold ${textPrimary}`}>Quotations</h1><p className={`text-[13px] ${textMuted}`}>Manage quotes</p></div><button onClick={()=> setShowCreateQuote(true)} className="h-9 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-[13px] font-medium flex items-center gap-2"><Plus size={16}/>Create Quotation</button></div>
-              <div className={`rounded-2xl border overflow-hidden ${bgCard}`}><table className="w-full"><thead className={`${isDark?"bg-[#0f0f1a]":"bg-slate-50"} border-b ${borderC} text-[11px] ${textMuted} uppercase tracking-widest`}><tr><th className="text-left p-3">Quote ID</th><th className="text-left p-3">Client</th><th className="text-left p-3">Amount</th><th className="text-left p-3">Valid Until</th><th className="text-left p-3">Status</th><th className="text-left p-3">Actions</th></tr></thead><tbody className={`divide-y ${borderC}`}>{quotations.map(q=> <tr key={q.id}><td className="p-3 mono text-[13px]">{q.id}</td><td className="p-3 text-[13px]">{q.clientName}</td><td className="p-3 font-semibold">₹{q.amount.toLocaleString()}</td><td className="p-3 text-[12px]">{q.validUntil}</td><td className="p-3"><span className={`text-[11px] px-2 py-1 rounded-full border ${q.status==="Sent"?"bg-blue-500/10 text-blue-600":"bg-slate-500/10 text-slate-600"}`}>{q.status}</span></td><td className="p-3 flex gap-1"><button onClick={()=> { const c = clients.find(x=> x.businessName===q.clientName); setNewInvoice({ number:`INV-2026-${String(invoices.length+1).padStart(3,"0")}`, date:new Date().toISOString().split("T")[0], dueDate:new Date(Date.now()+30*86400000).toISOString().split("T")[0], placeOfSupply:"27-Maharashtra", items:[{id:"1", name:`Services for ${q.clientName}`, hsn:"9972", qty:1, unit:"Nos", rate:q.amount/1.18, discount:0, gst:18}], amountPaid:0, clientId:c?.id||"", clientName:q.clientName, status:"Draft" }); setCurrentPage("invoices/new"); }} className="h-7 px-2 rounded-lg bg-indigo-600 text-white text-[11px]">Convert to Invoice</button></td></tr>)}</tbody></table></div>
+              <div className={`rounded-2xl border overflow-hidden ${bgCard}`}><table className="w-full"><thead className={`${isDark?"bg-[#0f0f1a]":"bg-slate-50"} border-b ${borderC} text-[11px] ${textMuted} uppercase tracking-widest`}><tr><th className="text-left p-3">Quote ID</th><th className="text-left p-3">Client</th><th className="text-left p-3">Amount</th><th className="text-left p-3">Valid Until</th><th className="text-left p-3">Status</th><th className="text-left p-3">Actions</th></tr></thead><tbody className={`divide-y ${borderC}`}>{quotations.map(q=> <tr key={q.id}><td className="p-3 mono text-[13px]">{q.id}</td><td className="p-3 text-[13px]">{q.clientName}</td><td className="p-3 font-semibold">₹{q.amount.toLocaleString()}</td><td className="p-3 text-[12px]">{q.validUntil}</td><td className="p-3"><span className={`text-[11px] px-2 py-1 rounded-full border ${q.status==="Sent"?"bg-blue-500/10 text-blue-600":"bg-slate-500/10 text-slate-600"}`}>{q.status}</span></td><td className="p-3 flex gap-1"><button onClick={async ()=> {
+  try {
+    const res = await apiFetch(`/api/quotations/${q.id}/convert-to-invoice`, { method: "POST" });
+    const data = await res.json();
+    if (res.ok && data.data) {
+      const newInv = toInvoice(data.data);
+      setInvoices(prev => [newInv, ...prev.filter(x => x.id !== newInv.id)]);
+      setQuotations(prev => prev.map(item => item.id === q.id ? { ...item, status: "Converted" } : item));
+      pushRealtimeNotification("Quotation Converted", `Quotation converted to Invoice #${newInv.number}`);
+      setToastMessage(`Converted to Invoice #${newInv.number} successfully.`);
+      setCurrentPage("invoices");
+      return;
+    }
+  } catch {
+    // fallback
+  }
+  const c = clients.find(x=> x.businessName.toLowerCase()===q.clientName.toLowerCase() || x.name.toLowerCase()===q.clientName.toLowerCase());
+  setNewInvoice({
+    number: `INV-2026-${String(invoices.length+1).padStart(3,"0")}`,
+    date: new Date().toISOString().split("T")[0],
+    dueDate: new Date(Date.now()+30*86400000).toISOString().split("T")[0],
+    placeOfSupply: "27-Maharashtra",
+    items: [{id:"1", name:`Services for ${q.clientName}`, hsn:"9972", qty:1, unit:"Nos", rate:q.amount/1.18, discount:0, gst:18}],
+    amountPaid: 0,
+    clientId: c?.id || (clients[0]?.id || ""),
+    clientName: q.clientName,
+    status: "Draft"
+  });
+  setCurrentPage("invoices/new");
+}} className="h-7 px-2 rounded-lg bg-indigo-600 text-white text-[11px]">Convert to Invoice</button></td></tr>)}</tbody></table></div>
             </div>
             </QuotationsPage>
           )}
@@ -1883,7 +1999,7 @@ if (userRole === "DIGITAL_MARKETING") {
 
           {currentPage === "tasks" && (
             <div className="max-w-[1600px] mx-auto w-full">
-              <UniversalTasksWorkspace dark={isDark} canCreate={true} canUpdateStatus={false} />
+              <UniversalTasksWorkspace dark={isDark} canCreate={true} canUpdateStatus={true} />
             </div>
           )}
 

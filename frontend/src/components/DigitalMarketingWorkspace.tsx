@@ -23,6 +23,7 @@ interface DigitalMarketingWorkspaceProps {
   onBack?: () => void;
   dark?: boolean;
   onToggleTheme?: () => void;
+  currentUser?: any;
 }
 
 export type MarketingClient = {
@@ -96,6 +97,7 @@ export default function DigitalMarketingWorkspace({
   onBack,
   dark: propDark = false,
   onToggleTheme,
+  currentUser,
 }: DigitalMarketingWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "clients" | "projects" | "assets" | "mockups">("overview");
   const [dark, setDark] = useState<boolean>(() => {
@@ -600,6 +602,11 @@ export default function DigitalMarketingWorkspace({
                 Z
               </div>
               <span className="font-semibold tracking-tight text-sm">Marketing Workspace</span>
+              {currentUser?.name && (
+                <span className="rounded-full bg-pink-500/10 border border-pink-500/20 px-2.5 py-0.5 text-[10px] font-bold text-pink-400">
+                  {currentUser.name}
+                </span>
+              )}
               {readOnly && (
                 <span className="rounded-full bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 text-[10px] font-bold text-indigo-400">
                   Shared Live View

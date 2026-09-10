@@ -33,6 +33,7 @@ import {
 } from "./db/crmFallback";
 import { addFallbackUpdate, createFallbackDeveloper, createFallbackProject, fallbackDeveloperOverview, fallbackProject, findFallbackDeveloper, listFallbackProjects, listFallbackUpdates, removeFallbackDeveloper, setFallbackProjectStatus } from "./db/deliveryFallback";
 import {
+  changeManagedUserPassword,
   createCompanyTask,
   createDailyUpdate,
   createManagedUser,
@@ -44,6 +45,7 @@ import {
   generateSowShareLink,
   getActiveSowTemplate,
   getCompanySettings,
+  getDefaultAllowedPages,
   getSowById,
   getSowByShareToken,
   getSowTemplateHistory,
@@ -133,7 +135,24 @@ const followupInput = z.object({ leadId: z.string().optional(), leadName: z.stri
 const followupUpdateInput = z.object({ leadName: z.string().min(2).max(160).optional(), company: z.string().max(160).nullable().optional(), property: z.string().max(300).nullable().optional(), type: z.string().min(2).max(40).optional(), date: z.string().date().optional(), time: z.string().max(32).nullable().optional(), assignedTo: z.string().max(120).nullable().optional(), priority: z.string().max(20).nullable().optional(), status: z.string().max(30).optional(), notes: z.string().max(2000).nullable().optional(), completed: z.boolean().optional() }).refine(data => Object.keys(data).length > 0, { message: "At least one follow-up field is required" });
 const clientInput = z.object({ name: z.string().optional(), businessName: z.string().optional(), company: z.string().max(160).optional().nullable(), email: z.string().max(255).optional().nullable(), phone: z.string().max(30).optional().nullable(), gstNumber: z.string().max(30).optional().nullable(), gstin: z.string().max(30).optional().nullable() });
 const quotationInput = z.object({ clientId: z.string().uuid().optional(), clientName: z.string().min(2).max(160), amount: z.number().positive(), validUntil: z.string().date(), status: z.enum(["Draft", "Sent", "Accepted"]).default("Draft") });
-const invoiceInput = z.object({ invoiceNumber: z.string().min(3).max(32), clientId: z.string().min(1), clientName: z.string().min(1).max(160).optional(), total: z.number().positive(), paidAmount: z.number().min(0).optional(), dueDate: z.string().datetime() });
+const invoiceInput = z.object({
+  invoiceNumber: z.string().min(3).max(32),
+  clientId: z.string().min(1),
+  clientName: z.string().min(1).max(160).optional(),
+  total: z.number().positive(),
+  paidAmount: z.number().min(0).optional(),
+  dueDate: z.string().datetime(),
+  items: z.array(z.object({
+    id: z.string().optional(),
+    name: z.string(),
+    hsn: z.string().optional(),
+    qty: z.number(),
+    unit: z.string().optional(),
+    rate: z.number(),
+    discount: z.number().optional(),
+    gst: z.number().optional(),
+  })).optional(),
+});
 const expenseInput = z.object({ title: z.string().min(2).max(160), category: z.string().min(2).max(80), amount: z.number().positive(), expenseDate: z.string().date().optional(), paymentMethod: z.string().min(2).max(40).optional(), description: z.string().max(2000).optional() });
 const paymentInput = z.object({ invoiceId: z.string().uuid(), amount: z.number().positive(), method: z.enum(["Cash", "UPI", "Bank Transfer", "Cheque"]), paymentDate: z.string().date().optional(), notes: z.string().max(2000).optional() });
 const developerInput = z.object({ name: z.string().min(2).max(120), email: z.string().email(), password: z.string().min(8) });
@@ -217,7 +236,20 @@ app.post("/api/auth/login", async (request: Request, response: Response) => {
     const user = rows[0] as UserRow | undefined;
     if (user && (await bcrypt.compare(password, user.password_hash))) {
       if (!user.is_active) { response.status(403).json({ message:"This account is inactive. Contact your Super Admin." }); return; }
-      response.json({ token: signToken(user.id, user.role), mustChangePassword: Boolean(user.must_change_password), user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+      const allowedPages = (user as any).allowed_pages || getDefaultAllowedPages(user.role);
+      response.json({
+        token: signToken(user.id, user.role),
+        mustChangePassword: Boolean(user.must_change_password),
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          department: (user as any).department || "Operations",
+          allowed_pages: allowedPages,
+          permissions: (user as any).permissions || {}
+        }
+      });
       return;
     }
   } catch {}
@@ -229,10 +261,21 @@ app.post("/api/auth/login", async (request: Request, response: Response) => {
       return;
     }
     await recordAuditLog("USER_LOGIN", "USER", managedUser.id, `${managedUser.name} logged in`, managedUser.id, managedUser.name).catch(() => {});
+    const allowedPages = managedUser.allowed_pages && managedUser.allowed_pages.length > 0
+      ? managedUser.allowed_pages
+      : getDefaultAllowedPages(managedUser.role);
     response.json({
       token: signToken(managedUser.id, managedUser.role),
       mustChangePassword: Boolean(managedUser.must_change_password),
-      user: { id: managedUser.id, name: managedUser.name, email: managedUser.email, role: managedUser.role },
+      user: {
+        id: managedUser.id,
+        name: managedUser.name,
+        email: managedUser.email,
+        role: managedUser.role,
+        department: managedUser.department,
+        allowed_pages: allowedPages,
+        permissions: managedUser.permissions || {}
+      },
       managed: true,
     });
     return;
@@ -240,11 +283,31 @@ app.post("/api/auth/login", async (request: Request, response: Response) => {
 
   const fallbackDeveloper = await findFallbackDeveloper(email);
   if (fallbackDeveloper && await bcrypt.compare(password, fallbackDeveloper.password_hash)) {
-    response.json({ token: signToken(fallbackDeveloper.id, fallbackDeveloper.role), user: { id: fallbackDeveloper.id, name: fallbackDeveloper.name, email: fallbackDeveloper.email, role: fallbackDeveloper.role }, fallback: true });
+    response.json({
+      token: signToken(fallbackDeveloper.id, fallbackDeveloper.role),
+      user: {
+        id: fallbackDeveloper.id,
+        name: fallbackDeveloper.name,
+        email: fallbackDeveloper.email,
+        role: fallbackDeveloper.role,
+        department: "Engineering",
+        allowed_pages: getDefaultAllowedPages(fallbackDeveloper.role),
+        permissions: {}
+      },
+      fallback: true
+    });
     return;
   }
   if (demoUser && isDemoPassword(password)) {
-    response.json({ token: signToken(demoUser.id, demoUser.role), user: demoUser, offline: true });
+    response.json({
+      token: signToken(demoUser.id, demoUser.role),
+      user: {
+        ...demoUser,
+        allowed_pages: getDefaultAllowedPages(demoUser.role),
+        permissions: {}
+      },
+      offline: true
+    });
     return;
   }
   response.status(401).json({ message: "Invalid email or password" });
@@ -253,6 +316,25 @@ app.post("/api/auth/change-password", requireAuth, async (request: AuthRequest, 
   const parsed = changePasswordInput.safeParse(request.body);
   if (!parsed.success) { response.status(400).json({ message: "Current and new passwords must be at least 8 characters." }); return; }
   if (parsed.data.currentPassword === parsed.data.newPassword) { response.status(400).json({ message: "Your new password must be different from your current password." }); return; }
+  
+  // 1. Check managed accounts in core store
+  try {
+    const managed = await findManagedUserById(request.user!.id).catch(() => null);
+    if (managed) {
+      await changeManagedUserPassword(request.user!.id, parsed.data.currentPassword, parsed.data.newPassword);
+      response.json({ message: "Password changed successfully." });
+      return;
+    }
+  } catch (err: any) {
+    if (err?.message === "INCORRECT_PASSWORD") {
+      response.status(401).json({ message: "Your current password is incorrect." });
+      return;
+    }
+    response.status(500).json({ message: "Unable to change password right now." });
+    return;
+  }
+
+  // 2. Query database accounts
   try {
     const users = await withDbTimeout(sql`SELECT id, password_hash FROM users WHERE id = ${request.user!.id} LIMIT 1`, 1000);
     const user = users[0] as { id: string; password_hash: string } | undefined;
@@ -266,14 +348,47 @@ app.post("/api/auth/change-password", requireAuth, async (request: AuthRequest, 
   }
 });
 app.get("/api/auth/me", requireAuth, async (request: AuthRequest, response) => {
+  const managed = await findManagedUserById(request.user!.id).catch(() => null);
+  if (managed) {
+    const allowedPages = managed.allowed_pages && managed.allowed_pages.length > 0
+      ? managed.allowed_pages
+      : getDefaultAllowedPages(managed.role);
+    response.json({
+      user: {
+        id: managed.id,
+        name: managed.name,
+        email: managed.email,
+        role: managed.role,
+        department: managed.department,
+        allowed_pages: allowedPages,
+        permissions: managed.permissions || {}
+      }
+    });
+    return;
+  }
   try {
     const rows = await withDbTimeout(sql`SELECT id, name, email, role FROM users WHERE id = ${request.user!.id} LIMIT 1`, 800);
-    const managed = await findManagedUserById(request.user!.id);
-    response.json({ user: rows[0] ?? (managed ? { id: managed.id, name: managed.name, email: managed.email, role: managed.role } : findDemoUser(request.user!.id)) ?? null });
-  } catch {
-    const managed = await findManagedUserById(request.user!.id);
-    response.json({ user: (managed ? { id: managed.id, name: managed.name, email: managed.email, role: managed.role } : findDemoUser(request.user!.id)) ?? null, offline: true });
-  }
+    const u = rows[0] as any;
+    if (u) {
+      response.json({
+        user: {
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          department: "Operations",
+          allowed_pages: getDefaultAllowedPages(u.role),
+          permissions: {}
+        }
+      });
+      return;
+    }
+  } catch {}
+  const demo = findDemoUser(request.user!.id);
+  response.json({
+    user: demo ? { ...demo, allowed_pages: getDefaultAllowedPages(demo.role), permissions: {} } : null,
+    offline: true
+  });
 });
 export function recordNotification(title: string, message: string, userId?: string) {
   // 1. Always persist to core store so notifications survive restarts, refreshes & serverless cold-starts
@@ -392,13 +507,22 @@ app.post("/api/notifications/clear-read", requireAuth, async (request: AuthReque
 
   response.status(204).send();
 });
-app.get("/api/leads", requireAuth, async (_request: AuthRequest, response) => {
+app.get("/api/leads", requireAuth, async (request: AuthRequest, response) => {
+  const scope = String(request.query.scope || "");
+  const userId = request.user?.id;
+  const isSales = request.user?.role === "SALES";
+  const filterToUser = (isSales && scope !== "team") || scope === "my";
   try {
-    const rows = await withDbTimeout(sql`SELECT * FROM leads ORDER BY created_at DESC`, 1200);
+    const rows = filterToUser && userId
+      ? await withDbTimeout(sql`SELECT * FROM leads WHERE assigned_to_id = ${userId} ORDER BY created_at DESC`, 1200)
+      : await withDbTimeout(sql`SELECT * FROM leads ORDER BY created_at DESC`, 1200);
     response.json({ data: rows });
   } catch {
     const fallback = await listFallbackLeads();
-    response.json({ data: fallback, offline: true });
+    const filtered = (filterToUser && userId)
+      ? fallback.filter(l => l.assigned_to_id === userId)
+      : fallback;
+    response.json({ data: filtered, offline: true });
   }
 });
 app.post("/api/leads", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES"), async (request: AuthRequest, response) => {
@@ -489,12 +613,23 @@ app.post("/api/leads/:id/convert", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN"
     response.json({ data: res, client: res.client, fallback: true });
   }
 });
-app.get("/api/followups", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES"), async (_request, response) => {
+app.get("/api/followups", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES"), async (request: AuthRequest, response) => {
+  const scope = String(request.query.scope || "");
+  const userId = request.user?.id;
+  const userName = request.user ? ((await findManagedUserById(request.user.id).catch(() => null))?.name || "") : "";
+  const isSales = request.user?.role === "SALES";
+  const filterToUser = (isSales && scope !== "team") || scope === "my";
   try {
-    const rows = await withDbTimeout(sql`SELECT * FROM followups ORDER BY followup_date ASC, followup_time ASC NULLS LAST`, 1200);
+    const rows = filterToUser && userId
+      ? await withDbTimeout(sql`SELECT * FROM followups WHERE (assigned_to = ${userId} OR assigned_to = ${userName}) ORDER BY followup_date ASC, followup_time ASC NULLS LAST`, 1200)
+      : await withDbTimeout(sql`SELECT * FROM followups ORDER BY followup_date ASC, followup_time ASC NULLS LAST`, 1200);
     response.json({ data: rows });
   } catch {
-    response.json({ data: await listFallbackFollowups(), fallback: true });
+    const all = await listFallbackFollowups();
+    const filtered = (filterToUser && userId)
+      ? all.filter(f => f.assigned_to === userId || (userName && f.assigned_to === userName))
+      : all;
+    response.json({ data: filtered, fallback: true });
   }
 });
 app.post("/api/followups", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALES"), async (request: AuthRequest, response) => {
@@ -758,36 +893,89 @@ app.post("/api/quotations", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN", "SALE
 });
 app.get("/api/invoices", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN"), async (request: AuthRequest, response) => {
   try {
-    const rows = request.user!.role === "SUPER_ADMIN"
-      ? await withDbTimeout(sql`SELECT invoices.*, clients.name AS client_name, clients.company AS client_company FROM invoices JOIN clients ON clients.id = invoices.client_id ORDER BY invoices.created_at DESC`, 1200)
-      : await withDbTimeout(sql`SELECT invoices.*, clients.name AS client_name, clients.company AS client_company FROM invoices JOIN clients ON clients.id = invoices.client_id WHERE invoices.created_by_id = ${request.user!.id} ORDER BY invoices.created_at DESC`, 1200);
+    const isSuperAdmin = request.user!.role === "SUPER_ADMIN";
+    const rows = isSuperAdmin
+      ? await withDbTimeout(sql`SELECT invoices.*, COALESCE(clients.company, clients.name, 'Client') AS client_name, clients.company AS client_company FROM invoices LEFT JOIN clients ON clients.id = invoices.client_id ORDER BY invoices.created_at DESC`, 1200)
+      : await withDbTimeout(sql`SELECT invoices.*, COALESCE(clients.company, clients.name, 'Client') AS client_name, clients.company AS client_company FROM invoices LEFT JOIN clients ON clients.id = invoices.client_id WHERE invoices.created_by_id = ${request.user!.id} ORDER BY invoices.created_at DESC`, 1200);
     response.json({ data: rows });
   } catch {
-    response.json({ data: await listFallbackInvoices(request.user!.role === "SUPER_ADMIN" ? undefined : request.user!.id), fallback: true });
+    const fallbackInvoices = await listFallbackInvoices(request.user!.role === "SUPER_ADMIN" ? undefined : request.user!.id);
+    const fallbackClients = await listFallbackClients().catch(() => []);
+    const mktClients = await listMarketingClients().catch(() => []);
+    const clientsMap = new Map<string, string>();
+    for (const c of fallbackClients) clientsMap.set(c.id, c.company || c.name);
+    for (const m of mktClients) if (!clientsMap.has(m.id)) clientsMap.set(m.id, m.name || m.contact_name || "");
+
+    const enrichedInvoices = fallbackInvoices.map((inv) => {
+      if (!inv.client_name || inv.client_name === "Client") {
+        const found = clientsMap.get(inv.client_id);
+        if (found) return { ...inv, client_name: found };
+      }
+      return inv;
+    });
+
+    response.json({ data: enrichedInvoices, fallback: true });
   }
 });
 app.post("/api/invoices", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN"), async (request: AuthRequest, response) => {
   const parsed = invoiceInput.safeParse(request.body);
   if (!parsed.success) { response.status(400).json({ message: "Invalid invoice", errors: parsed.error.flatten() }); return; }
   const data = parsed.data;
+
+  // 1. Resolve creator name
+  let creatorName = request.user!.role === "SUB_ADMIN" ? "ZootechX Sub Admin" : "ZootechX Super Admin";
   try {
     const creator = await withDbTimeout(sql`SELECT name FROM users WHERE id = ${request.user!.id} LIMIT 1`, 800);
-    const creatorName = creator[0]?.name ?? (findDemoUser(request.user!.id)?.name || request.user!.role);
+    if (creator[0]?.name) {
+      creatorName = creator[0].name;
+    } else {
+      const managedUser = await findManagedUserById(request.user!.id).catch(() => null);
+      creatorName = managedUser?.name || findDemoUser(request.user!.id)?.name || creatorName;
+    }
+  } catch {
+    const managedUser = await findManagedUserById(request.user!.id).catch(() => null);
+    creatorName = managedUser?.name || findDemoUser(request.user!.id)?.name || creatorName;
+  }
+
+  // 2. Resolve client name from data or client lookup
+  let clientName = data.clientName?.trim();
+  if (!clientName) {
+    try {
+      const dbClient = await withDbTimeout(sql`SELECT name, company FROM clients WHERE id = ${data.clientId} LIMIT 1`, 800);
+      if (dbClient[0]) {
+        clientName = dbClient[0].company || dbClient[0].name;
+      }
+    } catch {}
+  }
+  if (!clientName) {
+    const fallbackClients = await listFallbackClients().catch(() => []);
+    const mktClients = await listMarketingClients().catch(() => []);
+    const found = fallbackClients.find((c) => c.id === data.clientId) || mktClients.find((c) => c.id === data.clientId);
+    if (found) {
+      clientName = (found as any).company || found.name;
+    }
+  }
+  if (!clientName) {
+    clientName = "Client";
+  }
+
+  try {
     const rows = await withDbTimeout(sql`INSERT INTO invoices (invoice_number, client_id, total, paid_amount, due_date, created_by_id, created_by_name) VALUES (${data.invoiceNumber}, ${data.clientId}, ${data.total}, ${data.paidAmount ?? 0}, ${data.dueDate}, ${request.user!.id}, ${creatorName}) RETURNING *`, 1200);
-    recordNotification("Invoice Created", `Invoice #${data.invoiceNumber} for ${data.clientName ?? "Client"} (₹${Number(data.total).toLocaleString()})`, request.user!.id);
-    response.status(201).json({ data: rows[0] });
+    recordNotification("Invoice Created", `Invoice #${data.invoiceNumber} for ${clientName} (₹${Number(data.total).toLocaleString()})`, request.user!.id);
+    response.status(201).json({ data: { ...rows[0], client_name: clientName, created_by_name: creatorName, items: data.items } });
   } catch {
     const invoice = await addFallbackInvoice({
       invoice_number: data.invoiceNumber,
       client_id: data.clientId,
-      client_name: data.clientName ?? "Client",
+      client_name: clientName,
       total: data.total,
       paid_amount: data.paidAmount ?? 0,
       due_date: data.dueDate,
       created_by_id: request.user!.id,
-      created_by_name: findDemoUser(request.user!.id)?.name || request.user!.role,
+      created_by_name: creatorName,
+      items: data.items,
     });
-    recordNotification("Invoice Created", `Invoice #${data.invoiceNumber} for ${data.clientName ?? "Client"} (₹${Number(data.total).toLocaleString()})`, request.user!.id);
+    recordNotification("Invoice Created", `Invoice #${data.invoiceNumber} for ${clientName} (₹${Number(data.total).toLocaleString()})`, request.user!.id);
     response.status(201).json({ data: invoice, fallback: true });
   }
 });
@@ -1448,9 +1636,11 @@ const createUserInput = z.object({
   password: z.string().min(6),
   role: z.enum(["SUPER_ADMIN", "SUB_ADMIN", "SALES", "DEVELOPER", "DIGITAL_MARKETING"]),
   department: z.string().optional(),
+  allowed_pages: z.array(z.string()).optional(),
+  permissions: z.record(z.any()).optional(),
 });
 
-app.get("/api/users", requireAuth, allow("SUPER_ADMIN"), async (_request, response) => {
+app.get("/api/users", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN"), async (_request, response) => {
   try {
     const users = await listManagedUsers();
     response.json({ data: users });
@@ -1459,21 +1649,26 @@ app.get("/api/users", requireAuth, allow("SUPER_ADMIN"), async (_request, respon
   }
 });
 
-app.post("/api/users", requireAuth, allow("SUPER_ADMIN"), async (request: AuthRequest, response) => {
+app.post("/api/users", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN"), async (request: AuthRequest, response) => {
   const parsed = createUserInput.safeParse(request.body);
   if (!parsed.success) {
     response.status(400).json({ message: "Invalid user input", errors: parsed.error.flatten() });
     return;
   }
+  if (request.user!.role === "SUB_ADMIN" && parsed.data.role === "SUPER_ADMIN") {
+    response.status(403).json({ message: "Sub-Admin cannot create Super Admin accounts" });
+    return;
+  }
   try {
     const user = await createManagedUser(parsed.data);
+    const operator = request.user!.role === "SUPER_ADMIN" ? "Super Admin" : "Sub-Admin";
     await recordAuditLog(
       "USER_CREATED",
       "USER",
       user.id,
-      `Super Admin created employee account for ${user.name} (${user.email}) as ${user.role}`,
+      `${operator} created employee account for ${user.name} (${user.email}) as ${user.role}`,
       request.user!.id,
-      "Super Admin"
+      operator
     );
     recordNotification("Employee Provisioned", `Account created for ${user.name} (${user.role})`, request.user!.id);
     response.status(201).json({ data: user, message: "Employee account created successfully" });
@@ -1482,17 +1677,27 @@ app.post("/api/users", requireAuth, allow("SUPER_ADMIN"), async (request: AuthRe
   }
 });
 
-app.patch("/api/users/:id", requireAuth, allow("SUPER_ADMIN"), async (request: AuthRequest, response) => {
+app.patch("/api/users/:id", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN"), async (request: AuthRequest, response) => {
   const userId = String(request.params.id);
+  const target = await findManagedUserById(userId);
+  if (target && target.role === "SUPER_ADMIN" && request.user!.role !== "SUPER_ADMIN") {
+    response.status(403).json({ message: "Sub-Admin cannot modify Super Admin accounts" });
+    return;
+  }
+  if (request.user!.role === "SUB_ADMIN" && request.body?.role === "SUPER_ADMIN") {
+    response.status(403).json({ message: "Sub-Admin cannot elevate users to Super Admin" });
+    return;
+  }
   try {
     const updated = await updateManagedUser(userId, request.body);
+    const operator = request.user!.role === "SUPER_ADMIN" ? "Super Admin" : "Sub-Admin";
     await recordAuditLog(
       "USER_UPDATED",
       "USER",
       userId,
-      `Super Admin updated account for ${updated.name} (Role: ${updated.role}, Active: ${updated.is_active})`,
+      `${operator} updated account for ${updated.name} (Role: ${updated.role}, Active: ${updated.is_active})`,
       request.user!.id,
-      "Super Admin"
+      operator
     );
     response.json({ data: updated, message: "User updated successfully" });
   } catch (error) {
@@ -1500,8 +1705,13 @@ app.patch("/api/users/:id", requireAuth, allow("SUPER_ADMIN"), async (request: A
   }
 });
 
-app.post("/api/users/:id/reset-password", requireAuth, allow("SUPER_ADMIN"), async (request: AuthRequest, response) => {
+app.post("/api/users/:id/reset-password", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN"), async (request: AuthRequest, response) => {
   const userId = String(request.params.id);
+  const target = await findManagedUserById(userId);
+  if (target && target.role === "SUPER_ADMIN" && request.user!.role !== "SUPER_ADMIN") {
+    response.status(403).json({ message: "Sub-Admin cannot reset Super Admin passwords" });
+    return;
+  }
   const password = typeof request.body?.password === "string" ? request.body.password : (typeof request.body?.newPassword === "string" ? request.body.newPassword : "");
   if (!password || password.length < 6) {
     response.status(400).json({ message: "Password must be at least 6 characters" });
@@ -1509,13 +1719,14 @@ app.post("/api/users/:id/reset-password", requireAuth, allow("SUPER_ADMIN"), asy
   }
   try {
     await resetManagedUserPassword(userId, password);
+    const operator = request.user!.role === "SUPER_ADMIN" ? "Super Admin" : "Sub-Admin";
     await recordAuditLog(
       "PASSWORD_RESET",
       "USER",
       userId,
-      `Super Admin reset password for employee ID ${userId}`,
+      `${operator} reset password for employee ID ${userId}`,
       request.user!.id,
-      "Super Admin"
+      operator
     );
     response.json({ message: "Password reset successfully" });
   } catch (error) {
@@ -1523,17 +1734,27 @@ app.post("/api/users/:id/reset-password", requireAuth, allow("SUPER_ADMIN"), asy
   }
 });
 
-app.delete("/api/users/:id", requireAuth, allow("SUPER_ADMIN"), async (request: AuthRequest, response) => {
+app.delete("/api/users/:id", requireAuth, allow("SUPER_ADMIN", "SUB_ADMIN"), async (request: AuthRequest, response) => {
   const userId = String(request.params.id);
+  const target = await findManagedUserById(userId);
+  if (target && target.role === "SUPER_ADMIN") {
+    response.status(403).json({ message: "Super Admin accounts cannot be deleted" });
+    return;
+  }
+  if (request.user!.role === "SUB_ADMIN" && target && target.role === "SUB_ADMIN" && target.id !== request.user!.id) {
+    response.status(403).json({ message: "Sub-Admin cannot delete other Sub-Admins" });
+    return;
+  }
   try {
     await deleteManagedUser(userId);
+    const operator = request.user!.role === "SUPER_ADMIN" ? "Super Admin" : "Sub-Admin";
     await recordAuditLog(
       "USER_DELETED",
       "USER",
       userId,
-      `Super Admin removed user account ID ${userId}`,
+      `${operator} removed user account ID ${userId}`,
       request.user!.id,
-      "Super Admin"
+      operator
     );
     response.status(200).json({ message: "User account removed" });
   } catch (error) {
@@ -1797,18 +2018,11 @@ app.patch("/api/tasks/:id", requireAuth, async (request: AuthRequest, response) 
       return response.status(404).json({ message: "Task not found" });
     }
 
-    // Super Admin / Sub Admin cannot update if the task is completed or start.
-    // Tasks can only be updated by the particular employee account to whom the task was assigned.
-    if (request.user!.role === "SUPER_ADMIN" || request.user!.role === "SUB_ADMIN") {
-      return response.status(403).json({
-        message: "Super Admin can only monitor tasks. Only the assigned employee can update task progress.",
-      });
-    }
-
+    const isAdmin = request.user!.role === "SUPER_ADMIN" || request.user!.role === "SUB_ADMIN";
     const isAssignee = task.assigned_to_id === request.user!.id;
-    if (!isAssignee) {
+    if (!isAdmin && !isAssignee) {
       return response.status(403).json({
-        message: "Only the assigned employee can update this task.",
+        message: "Only the assigned employee or an administrator can update this task.",
       });
     }
 

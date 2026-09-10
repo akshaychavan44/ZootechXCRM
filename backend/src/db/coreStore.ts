@@ -5,6 +5,36 @@ import bcrypt from "bcryptjs";
 
 export type UserRole = "SUPER_ADMIN" | "SUB_ADMIN" | "SALES" | "DEVELOPER" | "DIGITAL_MARKETING";
 
+export function getDefaultAllowedPages(role: UserRole): string[] {
+  switch (role) {
+    case "SUPER_ADMIN":
+      return [
+        "dashboard", "sows", "leads", "followups", "invoices",
+        "invoices/new", "quotations", "clients", "developers",
+        "payments", "tasks", "audit-logs", "vault", "settings", "users"
+      ];
+    case "SUB_ADMIN":
+      return [
+        "dashboard", "projects", "sows", "clients", "invoices",
+        "tasks", "expenses", "vault", "users", "leads"
+      ];
+    case "SALES":
+      return [
+        "dashboard", "leads", "followups", "clients", "quotations", "sows", "tasks"
+      ];
+    case "DEVELOPER":
+      return [
+        "dashboard", "projects", "tasks", "issues", "updates", "vault"
+      ];
+    case "DIGITAL_MARKETING":
+      return [
+        "dashboard", "overview", "clients", "campaigns", "assets", "mockups"
+      ];
+    default:
+      return ["dashboard"];
+  }
+}
+
 export interface ManagedUser {
   id: string;
   name: string;
@@ -14,6 +44,8 @@ export interface ManagedUser {
   department: string;
   is_active: boolean;
   must_change_password: boolean;
+  allowed_pages?: string[];
+  permissions?: Record<string, { read: boolean; write: boolean; delete?: boolean }>;
   created_at: string;
   updated_at: string;
   last_login_at?: string | null;
@@ -241,6 +273,7 @@ const seedUsers: ManagedUser[] = [
     department: "Executive",
     is_active: true,
     must_change_password: false,
+    allowed_pages: getDefaultAllowedPages("SUPER_ADMIN"),
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z"
   },
@@ -253,6 +286,7 @@ const seedUsers: ManagedUser[] = [
     department: "Operations",
     is_active: true,
     must_change_password: false,
+    allowed_pages: getDefaultAllowedPages("SUB_ADMIN"),
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z"
   },
@@ -265,6 +299,7 @@ const seedUsers: ManagedUser[] = [
     department: "Sales & BD",
     is_active: true,
     must_change_password: false,
+    allowed_pages: getDefaultAllowedPages("SALES"),
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z"
   },
@@ -277,6 +312,7 @@ const seedUsers: ManagedUser[] = [
     department: "Marketing",
     is_active: true,
     must_change_password: false,
+    allowed_pages: getDefaultAllowedPages("DIGITAL_MARKETING"),
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z"
   },
@@ -289,6 +325,7 @@ const seedUsers: ManagedUser[] = [
     department: "Engineering",
     is_active: true,
     must_change_password: false,
+    allowed_pages: getDefaultAllowedPages("DEVELOPER"),
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z"
   }
@@ -598,6 +635,8 @@ export async function createManagedUser(input: {
   password: string;
   role: UserRole;
   department?: string;
+  allowed_pages?: string[];
+  permissions?: Record<string, { read: boolean; write: boolean; delete?: boolean }>;
 }): Promise<Omit<ManagedUser, "password_hash">> {
   const store = await readStore();
   const existing = store.users.find(u => u.email.toLowerCase() === input.email.toLowerCase());
@@ -606,6 +645,9 @@ export async function createManagedUser(input: {
   }
   const passwordHash = await bcrypt.hash(input.password, 10);
   const now = new Date().toISOString();
+  const allowedPages = (input.allowed_pages && input.allowed_pages.length > 0)
+    ? input.allowed_pages
+    : getDefaultAllowedPages(input.role);
   const newUser: ManagedUser = {
     id: randomUUID(),
     name: input.name.trim(),
@@ -615,6 +657,8 @@ export async function createManagedUser(input: {
     department: input.department?.trim() || "Operations",
     is_active: true,
     must_change_password: true,
+    allowed_pages: allowedPages,
+    permissions: input.permissions || {},
     created_at: now,
     updated_at: now
   };
@@ -626,7 +670,7 @@ export async function createManagedUser(input: {
 
 export async function updateManagedUser(
   id: string,
-  updates: Partial<Pick<ManagedUser, "name" | "role" | "department" | "is_active" | "must_change_password">>
+  updates: Partial<Pick<ManagedUser, "name" | "role" | "department" | "is_active" | "must_change_password" | "allowed_pages" | "permissions">>
 ): Promise<Omit<ManagedUser, "password_hash">> {
   const store = await readStore();
   const index = store.users.findIndex(u => u.id === id);
@@ -649,6 +693,18 @@ export async function resetManagedUserPassword(id: string, newPassword: string):
   if (!user) throw new Error("User not found");
   user.password_hash = await bcrypt.hash(newPassword, 10);
   user.must_change_password = true;
+  user.updated_at = new Date().toISOString();
+  await saveStore(store);
+}
+
+export async function changeManagedUserPassword(id: string, currentPassword: string, newPassword: string): Promise<void> {
+  const store = await readStore();
+  const user = store.users.find(u => u.id === id);
+  if (!user) throw new Error("User not found");
+  const match = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!match) throw new Error("INCORRECT_PASSWORD");
+  user.password_hash = await bcrypt.hash(newPassword, 10);
+  user.must_change_password = false;
   user.updated_at = new Date().toISOString();
   await saveStore(store);
 }

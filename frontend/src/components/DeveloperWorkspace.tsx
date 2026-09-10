@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Code2, FolderKanban, Users, Plus, KeyRound, RefreshCw,
@@ -50,6 +50,7 @@ export default function DeveloperWorkspace({
   onBack,
   dark: propDark,
   onToggleTheme,
+  currentUser,
 }: {
   admin?: boolean;
   subAdmin?: boolean;
@@ -58,6 +59,7 @@ export default function DeveloperWorkspace({
   onBack?: () => void;
   dark?: boolean;
   onToggleTheme?: () => void;
+  currentUser?: any;
 }) {
   const [activeTab, setActiveTab] = useState<"dashboard" | "projects" | "daily" | "issues" | "team" | "assign" | "vault" | "sows">("dashboard");
   const [developers, setDevelopers] = useState<Developer[]>([]);
@@ -488,16 +490,38 @@ export default function DeveloperWorkspace({
     badge?: number;
   };
 
-  const navigationItems: NavItem[] = [
-    { id: "dashboard", label: "Dev Pulse", icon: LayoutDashboard },
-    { id: "projects", label: admin ? "All Projects" : "My Projects", icon: FolderKanban, badge: projects.length },
-    ...(admin && !subAdmin ? [{ id: "daily", label: "Daily Updates", icon: CalendarDays, badge: dailyUpdatesList.length } as NavItem] : []),
-    ...(!admin ? [{ id: "sows", label: "Scope of Work (SOW)", icon: FileText } as NavItem] : []),
-    { id: "issues", label: "Issues & Bugs", icon: AlertCircle, badge: issuesList.filter((i) => i.status !== "RESOLVED").length },
-    ...(admin ? [{ id: "team", label: "Team Members", icon: Users, badge: developers.length } as NavItem] : []),
-    ...(admin ? [{ id: "assign", label: "Assign Project", icon: Plus } as NavItem] : []),
-    ...(!subAdmin ? [{ id: "vault", label: "Credentials & API Vault", icon: KeyRound } as NavItem] : []),
-  ];
+  const navigationItems: NavItem[] = useMemo(() => {
+    const items: NavItem[] = [
+      { id: "dashboard", label: "Dev Pulse", icon: LayoutDashboard },
+      { id: "projects", label: admin ? "All Projects" : "My Projects", icon: FolderKanban, badge: projects.length },
+      ...(admin && !subAdmin ? [{ id: "daily", label: "Daily Updates", icon: CalendarDays, badge: dailyUpdatesList.length } as NavItem] : []),
+      ...(!admin ? [{ id: "sows", label: "Scope of Work (SOW)", icon: FileText } as NavItem] : []),
+      { id: "issues", label: "Issues & Bugs", icon: AlertCircle, badge: issuesList.filter((i) => i.status !== "RESOLVED").length },
+      ...(admin ? [{ id: "team", label: "Team Members", icon: Users, badge: developers.length } as NavItem] : []),
+      ...(admin ? [{ id: "assign", label: "Assign Project", icon: Plus } as NavItem] : []),
+      ...(!subAdmin ? [{ id: "vault", label: "Credentials & API Vault", icon: KeyRound } as NavItem] : []),
+    ];
+
+    if (!currentUser?.allowed_pages || !Array.isArray(currentUser.allowed_pages) || currentUser.allowed_pages.length === 0) {
+      return items;
+    }
+    const allowed = currentUser.allowed_pages;
+    const filtered = items.filter(
+      (item) =>
+        allowed.includes(item.id) ||
+        (item.id === "daily" && allowed.includes("daily_updates")) ||
+        (item.id === "vault" && allowed.includes("credentials_vault")) ||
+        (item.id === "issues" && allowed.includes("developer_issues")) ||
+        (item.id === "team" && allowed.includes("developers"))
+    );
+    return filtered.length > 0 ? filtered : items;
+  }, [admin, subAdmin, projects.length, dailyUpdatesList.length, issuesList, developers.length, currentUser?.allowed_pages]);
+
+  useEffect(() => {
+    if (navigationItems.length > 0 && !navigationItems.some((n) => n.id === activeTab)) {
+      setActiveTab(navigationItems[0].id);
+    }
+  }, [navigationItems, activeTab]);
 
   const renderTabContent = () => (
     <>
@@ -2159,7 +2183,16 @@ export default function DeveloperWorkspace({
 
             {/* Bottom Actions */}
             {onLogout && (
-              <div className="p-4 border-t border-inherit space-y-2">
+              <div className="p-4 border-t border-inherit space-y-3">
+                <div className="flex items-center gap-2.5 px-2 py-1">
+                  <div className="h-8 w-8 rounded-lg bg-indigo-600/20 text-indigo-400 font-bold flex items-center justify-center text-xs border border-indigo-500/30 shrink-0">
+                    {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "D"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold truncate leading-tight">{currentUser?.name || "Developer"}</p>
+                    <p className={`text-[10px] truncate leading-tight ${mutedText}`}>{currentUser?.email || "dev@zootechx.com"}</p>
+                  </div>
+                </div>
                 <button
                   onClick={onLogout}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"
@@ -2194,7 +2227,7 @@ export default function DeveloperWorkspace({
                     : "Credentials & Secret Vault"}
                 </h2>
                 <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 text-[10px] font-bold text-indigo-400">
-                  {admin ? "Super Admin Access" : "Developer Role"}
+                  {currentUser?.name ? `${currentUser.name} • Dev` : (admin ? "Super Admin Access" : "Developer Role")}
                 </div>
               </div>
 

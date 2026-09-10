@@ -15,6 +15,7 @@ interface SalesDashboardProps {
   onLogout: () => void;
   dark?: boolean;
   onToggleTheme?: () => void;
+  currentUser?: any;
 }
 
 type Lead = {
@@ -52,8 +53,9 @@ type Client = {
   projects?: Array<{ id: string; title: string; name: string; status: string; category?: string; budget?: number; deadline?: string }>;
 };
 
-export default function SalesDashboard({ onLogout, dark: propDark = true, onToggleTheme }: SalesDashboardProps) {
+export default function SalesDashboard({ onLogout, dark: propDark = true, onToggleTheme, currentUser }: SalesDashboardProps) {
   const [page, setPage] = useState<"dashboard" | "leads" | "followups" | "clients" | "sows" | "tasks">("dashboard");
+  const [leadScope, setLeadScope] = useState<"all" | "my">("all");
   const [dark, setDark] = useState<boolean>(() => {
     if (propDark !== undefined) return propDark;
     if (typeof window !== "undefined") {
@@ -99,9 +101,10 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
   const load = async () => {
     setLoading(true);
     try {
+      const scopeParam = leadScope ? `?scope=${leadScope}` : "";
       const [l, f, c] = await Promise.all([
-        apiFetch("/api/leads"),
-        apiFetch("/api/followups"),
+        apiFetch(`/api/leads${scopeParam}`),
+        apiFetch(`/api/followups${scopeParam}`),
         apiFetch("/api/clients"),
       ]);
       const [ld, fd, cd] = await Promise.all([l.json(), f.json(), c.json()]);
@@ -120,7 +123,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
     void load();
     const interval = window.setInterval(() => void load(), 12000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [leadScope]);
 
   const handleUpdateFollowupStatus = async (followupId: string, newStatus: string) => {
     setFollowups((prev) =>
@@ -214,14 +217,28 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
     badge?: number;
   };
 
-  const menu: SalesMenuItem[] = [
-    { id: "dashboard", label: "Sales Radar", icon: LayoutDashboard },
-    { id: "leads", label: "Lead Intelligence", icon: Users, badge: leads.length },
-    { id: "followups", label: "Follow-up Queue", icon: CalendarDays, badge: followups.length },
-    { id: "sows", label: "Scope of Work (SOW)", icon: ClipboardList },
-    { id: "tasks", label: "Assigned Tasks", icon: ShieldCheck },
-    { id: "clients", label: "Client Directory", icon: Users, badge: clients.length },
-  ];
+  const menu: SalesMenuItem[] = useMemo(() => {
+    const allItems: SalesMenuItem[] = [
+      { id: "dashboard", label: "Sales Radar", icon: LayoutDashboard },
+      { id: "leads", label: "Lead Intelligence", icon: Users, badge: leads.length },
+      { id: "followups", label: "Follow-up Queue", icon: CalendarDays, badge: followups.length },
+      { id: "sows", label: "Scope of Work (SOW)", icon: ClipboardList },
+      { id: "tasks", label: "Assigned Tasks", icon: ShieldCheck },
+      { id: "clients", label: "Client Directory", icon: Users, badge: clients.length },
+    ];
+    if (!currentUser?.allowed_pages || !Array.isArray(currentUser.allowed_pages) || currentUser.allowed_pages.length === 0) {
+      return allItems;
+    }
+    const allowed = currentUser.allowed_pages;
+    const filtered = allItems.filter((item) => allowed.includes(item.id));
+    return filtered.length > 0 ? filtered : allItems;
+  }, [currentUser?.allowed_pages, leads.length, followups.length, clients.length]);
+
+  useEffect(() => {
+    if (menu.length > 0 && !menu.some((m) => m.id === page)) {
+      setPage(menu[0].id);
+    }
+  }, [menu, page]);
 
   return (
     <div className={`luxury-app ${dark ? "dark-theme" : "light-theme"} h-screen w-full overflow-hidden flex flex-row ${bgMain} font-sans antialiased transition-colors duration-200`}>
@@ -281,7 +298,16 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
         </nav>
 
         {/* Bottom Actions */}
-        <div className="p-4 border-t border-inherit space-y-2">
+        <div className="p-4 border-t border-inherit space-y-3">
+          <div className="flex items-center gap-2.5 px-2 py-1">
+            <div className="h-8 w-8 rounded-lg bg-cyan-600/20 text-cyan-400 font-bold flex items-center justify-center text-xs border border-cyan-500/30 shrink-0">
+              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "S"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold truncate leading-tight">{currentUser?.name || "Sales Executive"}</p>
+              <p className={`text-[10px] truncate leading-tight ${mutedText}`}>{currentUser?.email || "sales@zootechx.com"}</p>
+            </div>
+          </div>
           <button
             onClick={onLogout}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"
@@ -311,7 +337,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                 : "Client Directory"}
             </h2>
             <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 text-[10px] font-bold text-cyan-400">
-              Live Shared CRM
+              {currentUser?.name ? `${currentUser.name} • Sales` : "Live Shared CRM"}
             </div>
           </div>
 
@@ -760,6 +786,32 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  {/* Lead Scope Toggle */}
+                  <div className={`inline-flex rounded-xl border p-1 ${dark ? "bg-[#171f30] border-[#222d42]" : "bg-slate-100 border-slate-200"}`}>
+                    <button
+                      type="button"
+                      onClick={() => setLeadScope("all")}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        leadScope === "all"
+                          ? "bg-cyan-600 text-white shadow-sm"
+                          : mutedText
+                      }`}
+                    >
+                      All Leads
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLeadScope("my")}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                        leadScope === "my"
+                          ? "bg-cyan-600 text-white shadow-sm"
+                          : mutedText
+                      }`}
+                    >
+                      My Leads
+                    </button>
+                  </div>
+
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
