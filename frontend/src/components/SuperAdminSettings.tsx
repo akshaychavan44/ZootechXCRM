@@ -688,7 +688,7 @@ export default function SuperAdminSettings({
                     This will increment version to v{(activeTemplate?.version || 1) + 1}.0 and archive current template.
                   </p>
                 </div>
-                <button onClick={() => setShowReplaceModal(false)} className="text-slate-400 hover:text-white">
+                <button onClick={() => setShowReplaceModal(false)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
                   <X size={18} />
                 </button>
               </div>
@@ -776,7 +776,7 @@ export default function SuperAdminSettings({
                   <FileText size={18} className={dark ? "text-white" : "text-black"} />
                   <h3 className="text-base font-bold">Template Source & Token Inspection</h3>
                 </div>
-                <button onClick={() => setPreviewContentModal(null)} className="text-slate-400 hover:text-white">
+                <button onClick={() => setPreviewContentModal(null)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
                   <X size={18} />
                 </button>
               </div>

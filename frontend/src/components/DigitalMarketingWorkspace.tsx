@@ -1982,7 +1982,7 @@ export default function DigitalMarketingWorkspace({
                 <button
                   type="button"
                   onClick={() => setShowAddClientModal(false)}
-                  className="rounded-full p-1 text-stone-400 hover:text-black dark:hover:text-white"
+                  className="rounded-full p-1 text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -2105,7 +2105,7 @@ export default function DigitalMarketingWorkspace({
                 <button
                   type="button"
                   onClick={() => setEditingClient(null)}
-                  className="rounded-full p-1 text-stone-400 hover:text-black dark:hover:text-white"
+                  className="rounded-full p-1 text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -2189,7 +2189,7 @@ export default function DigitalMarketingWorkspace({
                 <button
                   type="button"
                   onClick={() => setShowAddProjectModal(false)}
-                  className="rounded-full p-1 text-stone-400 hover:text-black dark:hover:text-white"
+                  className="rounded-full p-1 text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -2328,7 +2328,7 @@ export default function DigitalMarketingWorkspace({
                 <button
                   type="button"
                   onClick={() => setShowAddAssetModal(false)}
-                  className="rounded-full p-1 text-stone-400 hover:text-black dark:hover:text-white"
+                  className="rounded-full p-1 text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -2474,7 +2474,7 @@ export default function DigitalMarketingWorkspace({
                 <button
                   type="button"
                   onClick={() => setPreviewingAsset(null)}
-                  className="rounded-full p-1 text-stone-400 hover:text-black dark:hover:text-white"
+                  className="rounded-full p-1 text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   <X size={16} />
                 </button>

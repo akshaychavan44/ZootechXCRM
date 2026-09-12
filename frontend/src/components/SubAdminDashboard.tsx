@@ -1183,7 +1183,7 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`relative w-full max-w-lg rounded-3xl border p-6 shadow-2xl ${bgCard}`}>
               <div className="flex items-center justify-between mb-4 border-b border-inherit pb-3">
                 <h3 className="font-bold text-base">Create Invoice</h3>
-                <button onClick={() => setShowAddInvoiceModal(false)} className="text-slate-400 hover:text-white"><X size={18}/></button>
+                <button onClick={() => setShowAddInvoiceModal(false)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"><X size={18}/></button>
               </div>
               <form
                 onSubmit={(e) => {
@@ -1263,7 +1263,7 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`relative w-full max-w-lg rounded-3xl border p-6 shadow-2xl ${bgCard}`}>
               <div className="flex items-center justify-between mb-4 border-b border-inherit pb-3">
                 <h3 className="font-bold text-base">Record Expense</h3>
-                <button onClick={() => setShowAddExpenseModal(false)} className="text-slate-400 hover:text-white"><X size={18}/></button>
+                <button onClick={() => setShowAddExpenseModal(false)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"><X size={18}/></button>
               </div>
               <form
                 onSubmit={(e) => {
@@ -1332,7 +1332,7 @@ export default function SubAdminDashboard({ onLogout, dark: propDark, onToggleTh
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className={`relative w-full max-w-lg rounded-3xl border p-6 shadow-2xl ${bgCard}`}>
               <div className="flex items-center justify-between mb-4 border-b border-inherit pb-3">
                 <h3 className="font-bold text-base">Add Client</h3>
-                <button onClick={() => setShowAddClientModal(false)} className="text-slate-400 hover:text-white"><X size={18}/></button>
+                <button onClick={() => setShowAddClientModal(false)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"><X size={18}/></button>
               </div>
               <form
                 onSubmit={(e) => {

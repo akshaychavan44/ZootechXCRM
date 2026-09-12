@@ -376,7 +376,7 @@ export default function PaymentsWorkspace({
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-xl p-1.5 text-slate-400 hover:text-white transition"
+                  className="rounded-xl p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   <X size={18} />
                 </button>

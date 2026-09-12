@@ -1199,7 +1199,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
             >
               <div className="flex items-center justify-between border-b border-inherit pb-4">
                 <h3 className="font-bold text-base">Lead Information</h3>
-                <button onClick={() => setSelectedLead(null)} className="text-slate-400 hover:text-white">
+                <button onClick={() => setSelectedLead(null)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
                   <X size={18} />
                 </button>
               </div>

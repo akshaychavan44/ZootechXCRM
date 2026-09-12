@@ -669,7 +669,7 @@ export default function ScopeOfWorkWorkspace({
                     Automatically formatted using the company-wide active contract template ({activeTemplate?.version_label || "v1.0"}).
                   </p>
                 </div>
-                <button onClick={() => setShowCreateModal(false)} className="text-slate-400 hover:text-white">
+                <button onClick={() => setShowCreateModal(false)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
                   <X size={18} />
                 </button>
               </div>
@@ -812,7 +812,7 @@ export default function ScopeOfWorkWorkspace({
                     Modifying scope or commercials will automatically bump version to v{(editSow.version || 1) + 1}.0.
                   </p>
                 </div>
-                <button onClick={() => setEditSow(null)} className="text-slate-400 hover:text-white">
+                <button onClick={() => setEditSow(null)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
                   <X size={18} />
                 </button>
               </div>
@@ -898,7 +898,7 @@ export default function ScopeOfWorkWorkspace({
                   <Mail size={18} className="text-purple-400" />
                   <h3 className="text-base font-bold">Email SOW Proposal to Client</h3>
                 </div>
-                <button onClick={() => setEmailModalSow(null)} className="text-slate-400 hover:text-white">
+                <button onClick={() => setEmailModalSow(null)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
                   <X size={18} />
                 </button>
               </div>
@@ -993,7 +993,7 @@ export default function ScopeOfWorkWorkspace({
                   <Share2 size={18} className="text-blue-400" />
                   <h3 className="text-base font-bold">Client Public SOW Link</h3>
                 </div>
-                <button onClick={() => setShareModalSow(null)} className="text-slate-400 hover:text-white">
+                <button onClick={() => setShareModalSow(null)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
                   <X size={18} />
                 </button>
               </div>
@@ -1085,7 +1085,7 @@ export default function ScopeOfWorkWorkspace({
                     <span className="hidden sm:inline">Print / PDF</span>
                   </button>
 
-                  <button onClick={() => setPreviewSow(null)} className="text-slate-400 hover:text-white ml-2">
+                  <button onClick={() => setPreviewSow(null)} className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 ml-2 transition-colors">
                     <X size={20} />
                   </button>
                 </div>

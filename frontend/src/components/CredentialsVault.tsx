@@ -791,7 +791,7 @@ export default function CredentialsVault({ dark = true }: { dark?: boolean }) {
                 <button
                   type="button"
                   onClick={() => setOpenModal(false)}
-                  className={`rounded-xl p-1.5 text-slate-400 hover:text-white ${dark ? "hover:bg-white/10" : "hover:bg-slate-100"}`}
+                  className="rounded-xl p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   <X size={20} />
                 </button>

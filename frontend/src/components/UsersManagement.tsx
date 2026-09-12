@@ -659,7 +659,7 @@ export default function UsersManagement({
                 </div>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className={`h-8 w-8 rounded-xl border flex items-center justify-center ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}
+                  className={`h-8 w-8 rounded-xl border flex items-center justify-center hover:text-rose-500 hover:border-rose-300 dark:hover:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}
                 >
                   <X size={15} />
                 </button>
@@ -853,7 +853,7 @@ export default function UsersManagement({
                 </div>
                 <button
                   onClick={() => setEditUser(null)}
-                  className={`h-8 w-8 rounded-xl border flex items-center justify-center ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}
+                  className={`h-8 w-8 rounded-xl border flex items-center justify-center hover:text-rose-500 hover:border-rose-300 dark:hover:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}
                 >
                   <X size={15} />
                 </button>
@@ -1021,7 +1021,7 @@ export default function UsersManagement({
                 <h3 className={`font-bold text-base ${dark ? "text-white" : "text-[#1c1917]"}`}>Reset Password</h3>
                 <button
                   onClick={() => setResetUser(null)}
-                  className={`h-8 w-8 rounded-xl border flex items-center justify-center ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}
+                  className={`h-8 w-8 rounded-xl border flex items-center justify-center hover:text-rose-500 hover:border-rose-300 dark:hover:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}
                 >
                   <X size={15} />
                 </button>

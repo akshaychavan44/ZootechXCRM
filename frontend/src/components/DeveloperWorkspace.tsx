@@ -1141,7 +1141,7 @@ export default function DeveloperWorkspace({
                         </div>
                         <button
                           onClick={() => setSelected(null)}
-                          className="p-1.5 rounded-xl text-slate-400 hover:text-white"
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                         >
                           <X size={20} />
                         </button>
@@ -1778,7 +1778,7 @@ export default function DeveloperWorkspace({
                           </div>
                           <h4 className="font-bold text-lg leading-snug">{selectedIssue.title}</h4>
                         </div>
-                        <button onClick={() => setSelectedIssue(null)} className={`h-8 w-8 rounded-xl border flex items-center justify-center shrink-0 ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}>
+                        <button onClick={() => setSelectedIssue(null)} className={`h-8 w-8 rounded-xl border flex items-center justify-center shrink-0 hover:text-rose-500 hover:border-rose-300 dark:hover:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}>
                           <X size={15} />
                         </button>
                       </div>
@@ -1854,7 +1854,7 @@ export default function DeveloperWorkspace({
                     >
                       <div className="flex items-center justify-between pb-3 border-b border-inherit">
                         <h4 className="font-bold text-sm">Report Bug / Technical Issue</h4>
-                        <button onClick={() => setShowIssueModal(false)} className={`h-8 w-8 rounded-xl border flex items-center justify-center ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}>
+                        <button onClick={() => setShowIssueModal(false)} className={`h-8 w-8 rounded-xl border flex items-center justify-center hover:text-rose-500 hover:border-rose-300 dark:hover:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}>
                           <X size={15} />
                         </button>
                       </div>
@@ -1969,7 +1969,7 @@ export default function DeveloperWorkspace({
                     <h3 className="font-bold text-base">Create Developer Login</h3>
                     <button
                       onClick={() => setShowCreateDevModal(false)}
-                      className="text-slate-400 hover:text-white"
+                      className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                     >
                       <X size={18} />
                     </button>

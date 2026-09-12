@@ -417,7 +417,7 @@ export default function UniversalTasksWorkspace({
                   <h3 className={`font-bold text-base ${dark ? "text-white" : "text-[#1c1917]"}`}>Create & Assign Task</h3>
                   <p className={`text-xs ${muted}`}>Delegate work across engineering, sales, or marketing</p>
                 </div>
-                <button onClick={() => setShowCreateModal(false)} className={`h-8 w-8 rounded-xl border flex items-center justify-center ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}>
+                <button onClick={() => setShowCreateModal(false)} className={`h-8 w-8 rounded-xl border flex items-center justify-center hover:text-rose-500 hover:border-rose-300 dark:hover:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}>
                   <X size={15} />
                 </button>
               </div>
@@ -564,7 +564,7 @@ export default function UniversalTasksWorkspace({
                 </div>
                 <button
                   onClick={() => setViewTask(null)}
-                  className={`h-8 w-8 rounded-full flex items-center justify-center border transition ${dark ? "border-slate-700 text-slate-400 hover:text-white hover:bg-white/10" : "border-slate-200 text-slate-500 hover:text-black hover:bg-slate-100"}`}
+                  className="h-8 w-8 rounded-full flex items-center justify-center border border-inherit text-slate-400 hover:text-rose-500 hover:border-rose-300 dark:hover:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   <X size={16} />
                 </button>

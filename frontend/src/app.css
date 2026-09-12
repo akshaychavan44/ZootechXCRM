@@ -1142,3 +1142,21 @@ html.dark .tail-btn-secondary:hover {
   color: #ffffff;
 }
 
+/* Modal & Dialog Close (Cross) Button styling: Always hover/click red, never invisible white */
+button:has(> svg.lucide-x):hover,
+button:has(> svg.lucide-x):active,
+button:has(> svg.lucide-x):focus-visible,
+button:hover > svg.lucide-x,
+button:active > svg.lucide-x {
+  color: #f43f5e !important;
+  stroke: #f43f5e !important;
+}
+
+.fixed button:has(> svg.lucide-x):hover,
+.fixed button:has(> svg.lucide-x):active,
+[role="dialog"] button:has(> svg.lucide-x):hover {
+  color: #f43f5e !important;
+  background-color: rgba(244, 63, 94, 0.08) !important;
+  border-color: rgba(244, 63, 94, 0.25) !important;
+}
+
