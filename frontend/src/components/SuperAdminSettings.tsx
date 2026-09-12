@@ -200,11 +200,11 @@ export default function SuperAdminSettings({
     showNotification("Downloaded active template markdown file");
   };
 
-  // Nocturne & Ivory Luxury Design System
-  const bgCard = dark ? "bg-[#121826] border-[#1e293b] text-[#f1f5f9]" : "bg-white border-[#eee6da] text-[#1c1917] shadow-[0_4px_20px_-2px_rgba(180,155,120,0.08)]";
-  const inputBg = dark ? "bg-[#171f30] border-[#222d42] text-[#f1f5f9] placeholder-[#5a687d]" : "bg-[#fcfaf7] border-[#e5dcd0] text-[#1c1917] placeholder-[#a8a199]";
-  const mutedText = dark ? "text-[#8e9bb0]" : "text-[#78716c]";
-  const borderC = dark ? "border-[#1e293b]" : "border-[#eee6da]";
+  // Pure Black & Pure White Luxury Design System
+  const bgCard = dark ? "bg-black border-zinc-800 text-white" : "bg-white border-zinc-200 text-black shadow-sm";
+  const inputBg = dark ? "bg-[#09090b] border-zinc-800 text-white placeholder-zinc-500 focus:border-zinc-500" : "bg-white border-zinc-300 text-black placeholder-zinc-400 focus:border-black";
+  const mutedText = dark ? "text-zinc-400" : "text-zinc-600";
+  const borderC = dark ? "border-zinc-800" : "border-zinc-200";
 
   const supportedTokens = [
     { token: "{{company_name}}", desc: "ZootechX Technologies Pvt. Ltd." },
@@ -265,10 +265,10 @@ export default function SuperAdminSettings({
           onClick={() => void loadAll()}
           title="Refresh settings"
           className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${
-            dark ? "border-[#222d42] bg-[#171f30] text-slate-300 hover:text-white" : "border-[#e5dcd0] bg-white text-slate-700 hover:bg-[#f5eddf]"
+            dark ? "border-zinc-800 bg-zinc-900 text-zinc-300 hover:text-white" : "border-zinc-300 bg-white text-black hover:bg-zinc-100"
           }`}
         >
-          <RefreshCw size={15} className={loading ? "animate-spin text-[#cca45f]" : ""} />
+          <RefreshCw size={15} className={loading ? "animate-spin text-white" : ""} />
         </button>
       </div>
 
@@ -290,12 +290,12 @@ export default function SuperAdminSettings({
               className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
                 active
                   ? dark
-                    ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/40 shadow-sm"
-                    : "bg-white text-[#a07432] border border-[#eee6da] shadow-sm"
-                  : `${mutedText} hover:${dark ? "bg-white/5 text-white" : "bg-[#f4eee4] text-[#1c1917]"}`
+                    ? "bg-white text-black shadow-sm font-bold"
+                    : "btn-dark-gradient text-white shadow-sm font-bold"
+                  : `${mutedText} hover:${dark ? "bg-white/5 text-white" : "bg-black/5 text-black"}`
               }`}
             >
-              <tab.icon size={15} className={active ? (dark ? "text-[#cca45f]" : "text-[#a07432]") : ""} />
+              <tab.icon size={15} className={active ? (dark ? "text-black" : "text-white") : ""} />
               <span>{tab.label}</span>
             </button>
           );
@@ -310,7 +310,7 @@ export default function SuperAdminSettings({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-inherit">
               <div className="flex items-center gap-3.5">
                 <div className={`h-12 w-12 rounded-2xl flex items-center justify-center border ${
-                  dark ? "bg-[#171f30] border-[#cca45f]/30 text-[#cca45f]" : "bg-[#fbf7f0] border-[#cca45f]/40 text-[#a07432]"
+                  dark ? "bg-zinc-900 border-zinc-700 text-white" : "bg-zinc-100 border-zinc-300 text-black"
                 }`}>
                   <FileText size={24} />
                 </div>
@@ -352,11 +352,7 @@ export default function SuperAdminSettings({
 
                 <button
                   onClick={() => setShowReplaceModal(true)}
-                  className={`h-9 px-4 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-md transition ${
-                    dark
-                      ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/50 hover:bg-[#1f2940]"
-                      : "bg-[#1c1917] text-[#faf6ee] hover:bg-[#292524]"
-                  }`}
+                  className="h-9 px-4 rounded-xl text-xs font-semibold flex items-center gap-2 btn-dark-gradient text-white shadow-md transition"
                 >
                   <Upload size={14} />
                   <span>Upload / Replace Template</span>
@@ -366,9 +362,9 @@ export default function SuperAdminSettings({
 
             {/* Template Metadata Details */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-5">
-              <div className={`p-4 rounded-2xl border ${borderC} ${dark ? "bg-white/[0.02]" : "bg-[#fcfaf7]"}`}>
+              <div className={`p-4 rounded-2xl border ${borderC} ${dark ? "bg-white/[0.02]" : "bg-zinc-50"}`}>
                 <div className={`text-[11px] uppercase tracking-wider font-semibold ${mutedText}`}>Version Number</div>
-                <div className="text-base font-bold mt-1 text-[#cca45f]">
+                <div className={`text-base font-bold mt-1 ${dark ? "text-white" : "text-black"}`}>
                   {activeTemplate?.version_label || "v1.0"} (Active)
                 </div>
               </div>
@@ -391,7 +387,7 @@ export default function SuperAdminSettings({
             {/* Supported Template Placeholders Cheatsheet */}
             <div className="mt-6 pt-5 border-t border-inherit">
               <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={15} className="text-[#cca45f]" />
+                <Sparkles size={15} className={dark ? "text-white" : "text-black"} />
                 <h4 className="text-xs font-bold uppercase tracking-wider">
                   Supported Template Dynamic Interpolation Tokens
                 </h4>
@@ -400,9 +396,9 @@ export default function SuperAdminSettings({
                 {supportedTokens.map((t) => (
                   <div
                     key={t.token}
-                    className={`p-2.5 rounded-xl border text-[11px] ${borderC} ${dark ? "bg-[#0f1420]" : "bg-[#faf6ee]"}`}
+                    className={`p-2.5 rounded-xl border text-[11px] ${borderC} ${dark ? "bg-[#09090b]" : "bg-zinc-50"}`}
                   >
-                    <code className="font-mono font-bold text-[#cca45f] block text-[11px]">{t.token}</code>
+                    <code className={`font-mono font-bold block text-[11px] ${dark ? "text-white" : "text-black"}`}>{t.token}</code>
                     <span className={`text-[10px] mt-0.5 block leading-tight ${mutedText}`}>{t.desc}</span>
                   </div>
                 ))}
@@ -413,7 +409,7 @@ export default function SuperAdminSettings({
           {/* Archived Version History */}
           <div className={`rounded-3xl border p-6 ${bgCard}`}>
             <h3 className="text-base font-bold mb-1 flex items-center gap-2">
-              <History size={16} className="text-[#cca45f]" />
+              <History size={16} className={dark ? "text-zinc-400" : "text-zinc-600"} />
               <span>Template Version History</span>
             </h3>
             <p className={`text-xs mb-4 ${mutedText}`}>
@@ -439,7 +435,7 @@ export default function SuperAdminSettings({
                   <tbody className="divide-y divide-inherit">
                     {templateHistory.map((hist) => (
                       <tr key={hist.id} className={`hover:${dark ? "bg-white/5" : "bg-slate-50"}`}>
-                        <td className="py-3 px-3 font-bold font-mono text-[#cca45f]">{hist.version_label}</td>
+                        <td className="py-3 px-3 font-bold font-mono text-emerald-400">{hist.version_label}</td>
                         <td className="py-3 px-3 font-medium">{hist.name}</td>
                         <td className={`py-3 px-3 ${mutedText}`}>
                           {new Date(hist.uploaded_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
@@ -550,11 +546,7 @@ export default function SuperAdminSettings({
             <button
               type="submit"
               disabled={savingSettings}
-              className={`h-10 px-5 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-md transition disabled:opacity-50 ${
-                dark
-                  ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/50 hover:bg-[#1f2940]"
-                  : "bg-[#1c1917] text-[#faf6ee] hover:bg-[#292524]"
-              }`}
+              className="h-10 px-5 rounded-xl text-xs font-semibold flex items-center gap-2 btn-dark-gradient text-white shadow-md transition disabled:opacity-50"
             >
               <Save size={15} />
               <span>{savingSettings ? "Saving Settings..." : "Save Company Information"}</span>
@@ -665,9 +657,7 @@ export default function SuperAdminSettings({
             <button
               type="button"
               onClick={() => showNotification("Email dispatcher preferences updated")}
-              className={`h-10 px-5 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-md ${
-                dark ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/50 hover:bg-[#1f2940]" : "bg-[#1c1917] text-[#faf6ee]"
-              }`}
+              className="h-10 px-5 rounded-xl text-xs font-semibold flex items-center gap-2 btn-dark-gradient text-white shadow-md"
             >
               <Save size={15} />
               <span>Save Email Configuration</span>
@@ -715,8 +705,8 @@ export default function SuperAdminSettings({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <label className={`cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold ${dark ? "border-[#222d42] bg-white/5 hover:bg-white/10" : "border-[#eee6da] bg-white"}`}>
-                    <Upload size={14} className="text-[#cca45f]" />
+                  <label className={`cursor-pointer inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold ${dark ? "border-zinc-800 bg-white/5 hover:bg-white/10" : "border-zinc-300 bg-white"}`}>
+                    <Upload size={14} className={dark ? "text-white" : "text-black"} />
                     <span>Upload .md or .txt File</span>
                     <input type="file" accept=".md,.txt" onChange={handleFileUpload} className="hidden" />
                   </label>
@@ -760,9 +750,7 @@ export default function SuperAdminSettings({
                   <button
                     type="submit"
                     disabled={savingTemplate}
-                    className={`h-9 px-5 rounded-xl text-xs font-semibold shadow transition disabled:opacity-50 ${
-                      dark ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/50 hover:bg-[#1f2940]" : "bg-[#1c1917] text-white"
-                    }`}
+                    className="h-9 px-5 rounded-xl text-xs font-semibold btn-dark-gradient text-white shadow transition disabled:opacity-50"
                   >
                     {savingTemplate ? "Publishing..." : `Publish as Version v${(activeTemplate?.version || 1) + 1}.0`}
                   </button>
@@ -785,7 +773,7 @@ export default function SuperAdminSettings({
             >
               <div className="flex items-center justify-between pb-4 border-b border-inherit">
                 <div className="flex items-center gap-2">
-                  <FileText size={18} className="text-[#cca45f]" />
+                  <FileText size={18} className={dark ? "text-white" : "text-black"} />
                   <h3 className="text-base font-bold">Template Source & Token Inspection</h3>
                 </div>
                 <button onClick={() => setPreviewContentModal(null)} className="text-slate-400 hover:text-white">

@@ -1,17 +1,18 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&display=swap');
-
-* {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
-h1, h2, h3, .heading-font {
-  font-family: 'Outfit', 'Inter', sans-serif;
-  letter-spacing: -0.025em;
+body, button, input, select, textarea {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, .heading-font {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  letter-spacing: -0.02em;
 }
 
 .font-editorial {
-  font-family: 'Newsreader', 'Playfair Display', Georgia, serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .mono {
@@ -20,31 +21,27 @@ h1, h2, h3, .heading-font {
 
 :root {
   color-scheme: dark light;
-  --luxury-bg: #0c1017;
-  --luxury-surface: #0f1420;
-  --luxury-card: #121826;
+  --luxury-bg: #090d16;
+  --luxury-surface: #0f172a;
+  --luxury-card: #0f172a;
   --luxury-card-border: #1e293b;
-  --luxury-card-glow: rgba(204, 164, 95, 0.15);
-  --luxury-gold: #cca45f;
-  --luxury-gold-dark: #b88a44;
-  --luxury-gold-light: #e5c07b;
-  --luxury-indigo: #6366f1;
-  --luxury-violet: #8b5cf6;
-  --luxury-cyan: #06b6d4;
-  --luxury-emerald: #10b981;
+  --luxury-card-glow: rgba(0, 0, 0, 0.4);
+  --luxury-dark-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --luxury-accent: #38bdf8;
+  --luxury-accent-soft: rgba(56, 189, 248, 0.08);
 }
 
 html.light,
 html:not(.dark) {
   color-scheme: light;
-  --luxury-bg: #fbf8f2;
-  --luxury-surface: #f8f4ec;
+  --luxury-bg: #f8fafc;
+  --luxury-surface: #ffffff;
   --luxury-card: #ffffff;
-  --luxury-card-border: #eee6da;
-  --luxury-card-glow: rgba(184, 138, 68, 0.12);
-  --luxury-gold: #a07432;
-  --luxury-gold-dark: #8c6328;
-  --luxury-gold-light: #f5eddf;
+  --luxury-card-border: #e2e8f0;
+  --luxury-card-glow: rgba(0, 0, 0, 0.03);
+  --luxury-dark-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --luxury-accent: #0f172a;
+  --luxury-accent-soft: rgba(15, 23, 42, 0.05);
 }
 
 html, body {
@@ -54,18 +51,19 @@ html, body {
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 html.dark, html.dark body {
-  background: #0c1017;
-  color: #f1f5f9;
+  background: #090d16;
+  color: #f8fafc;
 }
 
 html.light, html.light body,
 html:not(.dark), html:not(.dark) body {
-  background: #fbf8f2;
-  color: #1c1917;
+  background: #f8fafc;
+  color: #0f172a;
 }
 
 #__next {
@@ -159,42 +157,47 @@ body:has([class*="fixed"][class*="inset-0"]:not(.z-10)) .header-new-dropdown {
 html.dark .luxury-app,
 .luxury-app.dark-theme,
 html:not(.light) .luxury-app:not(.light-theme) {
-  background-color: #0c1017;
+  background-color: #000000;
   background-image: 
-    radial-gradient(at 100% 0%, rgba(204, 164, 95, 0.07) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(18, 24, 38, 0.4) 0px, transparent 40%),
-    radial-gradient(at 50% 50%, rgba(15, 20, 32, 0.5) 0px, transparent 60%);
+    radial-gradient(at 100% 0%, rgba(255, 255, 255, 0.04) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(24, 24, 27, 0.5) 0px, transparent 40%),
+    radial-gradient(at 50% 50%, rgba(9, 9, 11, 0.7) 0px, transparent 60%);
 }
 
 html.light .luxury-app,
 html:not(.dark) .luxury-app,
 .luxury-app.light-theme {
-  background-color: #fbf8f2;
+  background-color: #ffffff;
   background-image: 
-    radial-gradient(at 100% 0%, rgba(184, 138, 68, 0.04) 0px, transparent 45%),
-    radial-gradient(at 0% 100%, rgba(244, 238, 228, 0.5) 0px, transparent 40%),
-    radial-gradient(at 50% 50%, rgba(251, 248, 242, 0.6) 0px, transparent 60%);
+    radial-gradient(at 100% 0%, rgba(0, 0, 0, 0.02) 0px, transparent 45%),
+    radial-gradient(at 0% 100%, rgba(244, 244, 245, 0.5) 0px, transparent 40%),
+    radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.8) 0px, transparent 60%);
 }
 
 /* Glass Panels with Specular Lighting */
 .glass-panel {
-  background: rgba(18, 24, 38, 0.85);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid #1e293b;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: rgba(12, 13, 18, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 html.light .glass-panel,
 html:not(.dark) .glass-panel {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #eee6da;
-  box-shadow: 0 16px 36px rgba(180, 155, 120, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .glass-panel:hover {
-  border-color: rgba(204, 164, 95, 0.35);
-  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.45), 0 0 20px rgba(204, 164, 95, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+html.light .glass-panel:hover {
+  border-color: rgba(0, 0, 0, 0.25);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.08);
 }
 
 /* Input Fields */
@@ -203,15 +206,15 @@ html:not(.dark) .glass-panel {
 }
 
 .luxury-app input:focus, .luxury-app select:focus, .luxury-app textarea:focus {
-  border-color: #cca45f !important;
-  box-shadow: 0 0 0 3px rgba(204, 164, 95, 0.2), 0 0 16px rgba(204, 164, 95, 0.1) !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.15), 0 0 16px rgba(255, 255, 255, 0.08) !important;
 }
 
 html.light .luxury-app input:focus,
 html.light .luxury-app select:focus,
 html.light .luxury-app textarea:focus {
-  border-color: #a07432 !important;
-  box-shadow: 0 0 0 3px rgba(160, 116, 50, 0.15), 0 0 16px rgba(160, 116, 50, 0.08) !important;
+  border-color: #000000 !important;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1), 0 0 16px rgba(0, 0, 0, 0.04) !important;
 }
 
 /* Modern Card Hover Effects */
@@ -222,12 +225,12 @@ html.light .luxury-app textarea:focus {
 
 .luxury-app .rounded-2xl.border:hover,
 .luxury-app .rounded-3xl.border:hover {
-  border-color: rgba(204, 164, 95, 0.35);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 html.light .luxury-app .rounded-2xl.border:hover,
 html.light .luxury-app .rounded-3xl.border:hover {
-  border-color: rgba(160, 116, 50, 0.35);
+  border-color: rgba(0, 0, 0, 0.25);
 }
 
 /* Table styling */
@@ -247,13 +250,14 @@ html.light .luxury-app .rounded-3xl.border:hover {
 
 html.dark .luxury-app thead th,
 .luxury-app.dark-theme thead th {
-  color: #8e9bb0;
+  color: #a1a1aa;
 }
 
 html.light .luxury-app thead th,
 html:not(.dark) .luxury-app thead th,
 .luxury-app.light-theme thead th {
-  color: #78716c;
+  color: #000000;
+  font-weight: 800;
 }
 
 .luxury-app tbody tr {
@@ -261,12 +265,12 @@ html:not(.dark) .luxury-app thead th,
 }
 
 .luxury-app tbody tr:hover {
-  background: rgba(204, 164, 95, 0.05);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 html.light .luxury-app tbody tr:hover,
 .luxury-app.light-theme tbody tr:hover {
-  background: #f6f1e7;
+  background: rgba(0, 0, 0, 0.025);
 }
 
 /* Modern Pill Badges */
@@ -280,6 +284,479 @@ html.light .luxury-app tbody tr:hover,
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+}
+
+/* Super Admin CRM shell ---------------------------------------------------
+   Pure black in dark mode, pure white in light mode, dark gradients throughout. */
+.crm-shell {
+  --crm-accent: #18181b;
+  --crm-accent-soft: rgba(255, 255, 255, 0.08);
+  --crm-border: rgba(255, 255, 255, 0.1);
+  --crm-panel: #07070a;
+  background-color: #000000 !important;
+  background-image: none !important;
+}
+
+.crm-shell.light-theme {
+  --crm-accent: #000000;
+  --crm-accent-soft: rgba(0, 0, 0, 0.05);
+  --crm-border: #e4e4e7;
+  --crm-panel: #ffffff;
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+.crm-shell .crm-sidebar {
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.06);
+}
+
+.crm-shell.dark-theme .crm-sidebar,
+.crm-shell.dark-theme .crm-topbar {
+  background-color: #060609 !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+.crm-shell.light-theme .crm-sidebar,
+.crm-shell.light-theme .crm-topbar {
+  background-color: #ffffff !important;
+  border-color: #e4e4e7 !important;
+}
+
+.crm-shell .crm-sidebar > div:first-child {
+  min-height: 76px;
+  padding-inline: 20px;
+}
+
+.crm-shell .crm-navigation {
+  padding-top: 14px;
+}
+
+.crm-shell .crm-navigation button {
+  min-height: 42px;
+  border-color: transparent;
+  border-radius: 10px;
+  letter-spacing: -0.01em;
+}
+
+.crm-shell .crm-navigation button:hover {
+  background-color: var(--crm-accent-soft) !important;
+  transform: none;
+}
+
+.crm-shell .crm-navigation button[aria-current="page"] {
+  background: #ECF2FE !important;
+  border: none !important;
+  color: #3758F9 !important;
+  box-shadow: none !important;
+}
+
+.crm-shell .crm-navigation button[aria-current="page"] svg {
+  color: #3758F9 !important;
+}
+
+.crm-shell.light-theme .crm-navigation button[aria-current="page"] {
+  background: #ECF2FE !important;
+  border: none !important;
+  color: #3758F9 !important;
+  box-shadow: none !important;
+}
+
+.crm-shell.light-theme .crm-navigation button[aria-current="page"] svg {
+  color: #3758F9 !important;
+}
+
+.crm-shell.dark-theme .crm-navigation button[aria-current="page"] {
+  background: rgba(55, 88, 249, 0.15) !important;
+  border: none !important;
+  color: #5475F9 !important;
+  box-shadow: none !important;
+}
+
+.crm-shell.dark-theme .crm-navigation button[aria-current="page"] svg {
+  color: #5475F9 !important;
+}
+
+.crm-shell .crm-topbar {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
+
+.crm-shell .crm-topbar input {
+  height: 38px;
+  border-radius: 9px;
+}
+
+.crm-shell .crm-content {
+  background-image: none;
+}
+
+.crm-shell.dark-theme .crm-content {
+  background-color: #000000 !important;
+}
+
+.crm-shell.light-theme .crm-content {
+  background-color: #ffffff !important;
+}
+
+.crm-shell .rounded-2xl.border,
+.crm-shell .rounded-3xl.border {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.crm-shell .rounded-2xl.border:hover,
+.crm-shell .rounded-3xl.border:hover {
+  transform: none;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.crm-shell table thead th {
+  font-size: 10px;
+  letter-spacing: 0.07em;
+}
+
+.crm-shell table tbody tr:hover {
+  background: var(--crm-accent-soft);
+}
+
+.crm-shell button,
+.crm-shell input,
+.crm-shell select,
+.crm-shell textarea,
+.crm-shell [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.crm-shell button:focus-visible,
+.crm-shell input:focus-visible,
+.crm-shell select:focus-visible,
+.crm-shell textarea:focus-visible,
+.crm-shell [role="button"]:focus-visible {
+  outline: 2px solid var(--crm-accent) !important;
+  outline-offset: 2px;
+}
+
+.crm-shell .crm-mobile-nav {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.crm-shell .dashboard-reference > .grid {
+  gap: 1rem;
+}
+
+.crm-shell .dashboard-reference > .grid > .rounded-3xl,
+.crm-shell .dashboard-reference > .grid > .rounded-2xl,
+.crm-shell .crm-content > div > .rounded-2xl,
+.crm-shell .crm-content > div > .rounded-3xl {
+  border-color: var(--crm-border);
+}
+
+.crm-shell .crm-content h1 {
+  letter-spacing: -0.035em;
+}
+
+/* One action hierarchy: indigo for primary actions, neutral surfaces for
+   secondary actions, and semantic colour reserved for statuses only. */
+/* Action hierarchy: dark gradients with subtle borders and specular shine */
+.crm-shell button {
+  border-radius: 9px !important;
+  font-weight: 600;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important;
+}
+
+.btn-dark-gradient,
+.crm-shell .header-new-btn,
+.crm-shell button.btn-dark-gradient {
+  background: linear-gradient(135deg, #09090b 0%, #18181b 50%, #27272a 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+}
+
+.btn-dark-gradient:hover,
+.crm-shell .header-new-btn:hover,
+.crm-shell button.btn-dark-gradient:hover {
+  background: linear-gradient(135deg, #18181b 0%, #27272a 50%, #09090b 100%) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+.crm-shell button[class*="border"]:not([class*="bg-indigo-"]):not([class*="bg-violet-"]):not([class*="bg-emerald-"]):not([class*="bg-gradient-to-r"]) {
+  border-color: var(--crm-border) !important;
+  box-shadow: none !important;
+}
+
+.crm-shell button[class*="border"]:not([class*="bg-indigo-"]):not([class*="bg-violet-"]):not([class*="bg-emerald-"]):not([class*="bg-gradient-to-r"]):hover {
+  border-color: rgba(0, 0, 0, 0.3) !important;
+  background-color: var(--crm-accent-soft) !important;
+}
+
+.crm-shell.dark-theme button[class*="border"]:not([class*="bg-indigo-"]):not([class*="bg-violet-"]):not([class*="bg-emerald-"]):not([class*="bg-gradient-to-r"]):hover {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.crm-shell .rounded-3xl {
+  border-radius: 14px !important;
+}
+
+.crm-shell .rounded-2xl {
+  border-radius: 12px !important;
+}
+
+.crm-shell .crm-content > div > .flex:first-child {
+  min-height: 48px;
+}
+
+.crm-shell .crm-content label {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.crm-shell.light-theme .crm-content label {
+  color: #475569;
+}
+
+.crm-shell .crm-content .overflow-x-auto {
+  scrollbar-gutter: stable;
+}
+
+.crm-shell .crm-content table {
+  min-width: max-content;
+}
+
+.crm-shell .crm-content table thead {
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.crm-shell .crm-content table thead th {
+  height: 42px;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.crm-shell.light-theme .crm-content table thead th {
+  color: #64748b;
+}
+
+.crm-shell .crm-content table tbody td {
+  vertical-align: middle;
+}
+
+.crm-shell.light-theme .crm-content table thead {
+  background: #f8fafc;
+}
+
+.crm-shell .fixed.inset-0 > [class*="relative"][class*="rounded-2xl"],
+.crm-shell .fixed.inset-0 > [class*="relative"][class*="rounded-3xl"] {
+  border-color: var(--crm-border);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.26);
+}
+
+.crm-shell .fixed.inset-0 [class*="max-h-"] {
+  overscroll-behavior: contain;
+}
+
+.crm-shell .status-badge,
+.crm-shell [class*="rounded-full"][class*="text-[10px]"],
+.crm-shell [class*="rounded-full"][class*="text-[11px]"] {
+  letter-spacing: 0.025em;
+}
+
+@media (max-width: 1023px) {
+  .crm-shell .crm-topbar {
+    min-height: 60px;
+  }
+
+  .crm-shell .crm-content {
+    padding-bottom: 5.5rem;
+  }
+}
+
+/* Developer and marketing workspaces use the same enterprise visual system
+   as Super Admin while preserving their independent state and workflows. */
+.role-shell {
+  --role-accent: #18181b;
+  --role-accent-soft: rgba(255, 255, 255, 0.08);
+  --role-border: rgba(255, 255, 255, 0.1);
+  background-image: none !important;
+}
+
+.role-shell.light-theme,
+.marketing-shell.light-theme {
+  --role-accent: #000000;
+  --role-accent-soft: rgba(0, 0, 0, 0.05);
+  --role-border: #e4e4e7;
+}
+
+.developer-shell.dark-theme,
+.marketing-shell.dark-theme,
+.subadmin-shell.dark-theme,
+.sales-shell.dark-theme {
+  background-color: #000000 !important;
+}
+
+.developer-shell.light-theme,
+.marketing-shell.light-theme,
+.subadmin-shell.light-theme,
+.sales-shell.light-theme {
+  background-color: #ffffff !important;
+}
+
+.developer-shell aside,
+.developer-shell header,
+.subadmin-shell aside,
+.subadmin-shell header,
+.sales-shell aside,
+.sales-shell header {
+  border-color: var(--role-border) !important;
+}
+
+.developer-shell.dark-theme aside,
+.developer-shell.dark-theme header,
+.subadmin-shell.dark-theme aside,
+.subadmin-shell.dark-theme header,
+.sales-shell.dark-theme aside,
+.sales-shell.dark-theme header {
+  background-color: #060609 !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+.developer-shell.light-theme aside,
+.developer-shell.light-theme header,
+.subadmin-shell.light-theme aside,
+.subadmin-shell.light-theme header,
+.sales-shell.light-theme aside,
+.sales-shell.light-theme header {
+  background-color: #ffffff !important;
+  border-color: #e4e4e7 !important;
+}
+
+.role-shell button {
+  border-radius: 9px !important;
+  font-weight: 600;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease !important;
+}
+
+.role-shell button[class*="border"]:not([class*="bg-indigo-"]):not([class*="bg-violet-"]):not([class*="bg-emerald-"]):not([class*="bg-gradient-to-r"]) {
+  border-color: var(--role-border) !important;
+  box-shadow: none !important;
+}
+
+.role-shell .rounded-3xl { border-radius: 14px !important; }
+.role-shell .rounded-2xl { border-radius: 12px !important; }
+
+.role-shell input,
+.role-shell select,
+.role-shell textarea {
+  border-radius: 9px !important;
+}
+
+.role-shell input:focus-visible,
+.role-shell select:focus-visible,
+.role-shell textarea:focus-visible,
+.role-shell button:focus-visible {
+  outline: 2px solid var(--role-accent) !important;
+  outline-offset: 2px;
+}
+
+.developer-shell nav button[aria-current="page"],
+.subadmin-shell nav button[aria-current="page"],
+.sales-shell nav button[aria-current="page"],
+.marketing-shell nav button[aria-current="page"] {
+  background: #ECF2FE !important;
+  border: none !important;
+  color: #3758F9 !important;
+  box-shadow: none !important;
+}
+
+.developer-shell nav button[aria-current="page"] svg,
+.subadmin-shell nav button[aria-current="page"] svg,
+.sales-shell nav button[aria-current="page"] svg,
+.marketing-shell nav button[aria-current="page"] svg {
+  color: #3758F9 !important;
+}
+
+.developer-shell.light-theme nav button[aria-current="page"],
+.subadmin-shell.light-theme nav button[aria-current="page"],
+.sales-shell.light-theme nav button[aria-current="page"],
+.marketing-shell.light-theme nav button[aria-current="page"] {
+  background: #ECF2FE !important;
+  border: none !important;
+  color: #3758F9 !important;
+  box-shadow: none !important;
+}
+
+.developer-shell.light-theme nav button[aria-current="page"] svg,
+.subadmin-shell.light-theme nav button[aria-current="page"] svg,
+.sales-shell.light-theme nav button[aria-current="page"] svg,
+.marketing-shell.light-theme nav button[aria-current="page"] svg {
+  color: #3758F9 !important;
+}
+
+.developer-shell.dark-theme nav button[aria-current="page"],
+.subadmin-shell.dark-theme nav button[aria-current="page"],
+.sales-shell.dark-theme nav button[aria-current="page"],
+.marketing-shell.dark-theme nav button[aria-current="page"] {
+  background: rgba(55, 88, 249, 0.15) !important;
+  border: none !important;
+  color: #5475F9 !important;
+  box-shadow: none !important;
+}
+
+.developer-shell.dark-theme nav button[aria-current="page"] svg,
+.subadmin-shell.dark-theme nav button[aria-current="page"] svg,
+.sales-shell.dark-theme nav button[aria-current="page"] svg,
+.marketing-shell.dark-theme nav button[aria-current="page"] svg {
+  color: #5475F9 !important;
+}
+
+.role-shell table thead {
+  background: rgba(148, 163, 184, 0.04);
+}
+
+.role-shell table thead th {
+  height: 42px;
+  color: #a1a1aa;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.role-shell.light-theme table thead th {
+  color: #000000;
+  font-weight: 800;
+}
+
+.role-shell table tbody tr:hover {
+  background: var(--role-accent-soft);
+}
+
+.marketing-shell > header {
+  border-color: var(--role-border) !important;
+  background-color: color-mix(in srgb, #0f172a 92%, transparent) !important;
+}
+
+.marketing-shell.light-theme > header {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+}
+
+.marketing-shell .font-editorial {
+  font-family: 'Times New Roman', Times, serif !important;
+  font-style: normal !important;
+}
+
+.marketing-shell h1.font-editorial {
+  font-size: clamp(2rem, 4vw, 3.25rem) !important;
+  letter-spacing: -0.04em;
+  line-height: 1.08 !important;
+}
+
+.marketing-shell > main {
+  padding-top: 2rem !important;
+  padding-bottom: 2rem !important;
 }
 
 /* Luxury Login & Authentication Styles */
@@ -478,6 +955,31 @@ html.light .luxury-app tbody tr:hover,
   box-shadow: 0 0 24px rgba(99, 102, 241, 0.28), inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
+/* Reusable Dark Gradient Utility Classes */
+.bg-dark-gradient {
+  background: linear-gradient(135deg, #18181b 0%, #09090b 50%, #000000 100%) !important;
+}
+
+.bg-dark-gradient-subtle {
+  background: linear-gradient(135deg, rgba(24, 24, 27, 0.9) 0%, rgba(9, 9, 11, 0.95) 100%) !important;
+}
+
+.border-dark-gradient {
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.card-dark-gradient {
+  background: linear-gradient(145deg, #0c0c10 0%, #040406 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+html.light .card-dark-gradient,
+html:not(.dark) .card-dark-gradient {
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -487,3 +989,156 @@ html.light .luxury-app tbody tr:hover,
     scroll-behavior: auto !important;
   }
 }
+
+/* ==========================================================================
+   TAILADMIN CORE DESIGN SYSTEM UTILITIES
+   ========================================================================== */
+.tail-canvas {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+html.dark .tail-canvas {
+  background-color: #090d16;
+  color: #f8fafc;
+}
+
+.tail-card {
+  background-color: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+html.dark .tail-card {
+  background-color: rgba(15, 23, 42, 0.7);
+  border-color: #1e293b;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+}
+
+.tail-metric-icon {
+  height: 52px;
+  width: 52px;
+  border-radius: 0.75rem;
+  background-color: #f1f5f9;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+html.dark .tail-metric-icon {
+  background-color: #1e293b;
+  color: #94a3b8;
+}
+
+.tail-badge-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  background-color: #ecfdf5;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #059669;
+}
+html.dark .tail-badge-success {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.tail-badge-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  background-color: #fffbeb;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #d97706;
+}
+html.dark .tail-badge-warning {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+.tail-badge-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  background-color: #fef2f2;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #e11d48;
+}
+html.dark .tail-badge-danger {
+  background-color: rgba(244, 63, 94, 0.15);
+  color: #fb7185;
+}
+
+.tail-badge-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  background-color: #eff6ff;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2563eb;
+}
+html.dark .tail-badge-info {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.tail-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  background-color: #4f46e5;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+.tail-btn-primary:hover {
+  background-color: #4338ca;
+}
+
+.tail-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background-color: #ffffff;
+  color: #334155;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  transition: background-color 0.2s ease;
+}
+.tail-btn-secondary:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+html.dark .tail-btn-secondary {
+  border-color: #1e293b;
+  background-color: #0f172a;
+  color: #cbd5e1;
+}
+html.dark .tail-btn-secondary:hover {
+  background-color: #1e293b;
+  color: #ffffff;
+}
+

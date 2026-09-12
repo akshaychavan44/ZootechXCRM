@@ -4,12 +4,14 @@ import {
   Users, CalendarDays, ClipboardList, Search,
   Sun, Moon, ShieldCheck, Phone, Mail, Clock, ExternalLink,
   ChevronRight, Filter, LogOut, CheckCircle2, AlertCircle, Building, X, Megaphone,
-  LayoutDashboard, TrendingUp, Target, Flame, ArrowUpRight, CheckSquare
+  LayoutDashboard, TrendingUp, Target, Flame, ArrowUpRight, CheckSquare,
+  Menu, ChevronDown, Bell, Settings, RefreshCw
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import ScopeOfWorkWorkspace from "./ScopeOfWorkWorkspace";
 import UniversalTasksWorkspace from "./UniversalTasksWorkspace";
 import DigitalMarketingWorkspace from "./DigitalMarketingWorkspace";
+import ZootechXLogo from "./ZootechXLogo";
 
 interface SalesDashboardProps {
   onLogout: () => void;
@@ -85,11 +87,47 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
 
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [followups, setFollowups] = useState<Followup[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notice, setNotice] = useState("");
+
+  const searchContainerRef = React.useRef<HTMLDivElement>(null);
+  const userMenuRef = React.useRef<HTMLDivElement>(null);
+  const notifContainerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+      if (notifContainerRef.current && !notifContainerRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const searchMatches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return { leads: [], clients: [], followups: [] };
+    return {
+      leads: leads.filter(l => (l.full_name || "").toLowerCase().includes(q) || (l.company || "").toLowerCase().includes(q) || (l.email || "").toLowerCase().includes(q)).slice(0, 4),
+      clients: clients.filter(c => (c.name || "").toLowerCase().includes(q) || (c.company || "").toLowerCase().includes(q) || (c.email || "").toLowerCase().includes(q)).slice(0, 4),
+      followups: followups.filter(f => (f.lead_name || "").toLowerCase().includes(q) || (f.company || "").toLowerCase().includes(q)).slice(0, 4),
+    };
+  }, [query, leads, clients, followups]);
+
+  const pendingFollowups = useMemo(() => followups.filter((f) => f.status !== "COMPLETED"), [followups]);
 
   useEffect(() => {
     if (!notice) return;
@@ -174,12 +212,12 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
     );
   }, [clients, query]);
 
-  // Design Tokens (Nocturne & Ivory Luxury Palette)
-  const bgMain = dark ? "bg-[#0c1017] text-[#f1f5f9]" : "bg-[#fbf8f2] text-[#1c1917]";
-  const bgSidebar = dark ? "bg-[#0f1420] border-[#1b2438]" : "bg-[#f8f4ec] border-[#ede5d8]";
-  const bgCard = dark ? "bg-[#121826] border-[#1e293b] text-[#f1f5f9]" : "bg-white border-[#eee6da] text-[#1c1917] shadow-[0_4px_20px_-2px_rgba(180,155,120,0.08)]";
-  const inputBg = dark ? "bg-[#171f30] border-[#222d42] text-[#f1f5f9] placeholder-[#5a687d]" : "bg-[#fcfaf7] border-[#e5dcd0] text-[#1c1917] placeholder-[#a8a199]";
-  const mutedText = dark ? "text-[#8e9bb0]" : "text-[#78716c]";
+  // Professional SaaS Theme Palette matching screenshot
+  const bgMain = dark ? "bg-[#090d16] text-slate-100" : "bg-[#f8fafc] text-slate-900";
+  const bgSidebar = dark ? "bg-[#0c1017] border-slate-800 text-slate-300" : "bg-white border-slate-200/90 text-slate-700";
+  const bgCard = dark ? "bg-[#0f172a] border-slate-800 text-slate-100 shadow-sm" : "bg-white border-slate-200/80 text-slate-900 shadow-sm";
+  const inputBg = dark ? "bg-[#090d16] border-slate-800 text-slate-100 placeholder-slate-500 focus:border-slate-600" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-slate-400";
+  const mutedText = dark ? "text-slate-400" : "text-slate-500";
 
   // Sales Funnel & Summary Analytics
   const totalLeadsCount = leads.length;
@@ -241,29 +279,20 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
   }, [menu, page]);
 
   return (
-    <div className={`luxury-app ${dark ? "dark-theme" : "light-theme"} h-screen w-full overflow-hidden flex flex-row ${bgMain} font-sans antialiased transition-colors duration-200`}>
+    <div className={`luxury-app role-shell sales-shell ${dark ? "dark-theme" : "light-theme"} h-screen w-full overflow-hidden flex flex-row ${bgMain} font-sans antialiased transition-colors duration-200`}>
       {/* SIDEBAR NAVIGATION */}
-      <aside className={`w-[260px] shrink-0 hidden md:flex flex-col border-r ${bgSidebar} h-screen z-20`}>
+      <aside className={`w-[260px] shrink-0 ${sidebarOpen ? "hidden md:flex" : "hidden"} flex-col border-r ${bgSidebar} h-screen z-20 select-none transition-all duration-300`}>
         {/* Brand Header */}
-        <div className="p-5 border-b border-inherit flex items-center gap-3">
-          <div className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-base border ${
-            dark 
-              ? "bg-[#171f30] border-[#222d42] text-[#cca45f] shadow-[0_0_15px_rgba(204,164,95,0.15)]" 
-              : "bg-white border-[#eee6da] text-[#a07432] shadow-sm"
-          }`}>
-            Z
-          </div>
-          <div>
-            <div className="font-bold text-[14px] leading-tight flex items-center gap-1.5">
-              ZootechX<span className={dark ? "text-[#cca45f]" : "text-[#a07432]"}>.ai</span>
-              <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${dark ? "bg-[#cca45f]" : "bg-[#a07432]"}`} />
-            </div>
-            <div className={`text-[10px] font-mono uppercase tracking-widest font-semibold ${dark ? "text-[#cca45f]" : "text-[#a07432]"}`}>Sales Command</div>
-          </div>
+        <div className={`px-4 py-3.5 border-b ${dark ? "border-slate-800" : "border-slate-200/80"} flex items-center justify-between`}>
+          <ZootechXLogo variant="full" size="sm" dark={dark} subtitle="SALES PLATFORM" />
+        </div>
+
+        <div className="px-3.5 pt-4 pb-2">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8] dark:text-slate-500">MENU</span>
         </div>
 
         {/* Navigation List */}
-        <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           {menu.map((item) => {
             const active = page === item.id;
             return (
@@ -273,44 +302,41 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                   setPage(item.id);
                   setSelectedLead(null);
                 }}
-                className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-[13px] font-medium transition-all ${
+                aria-current={active ? "page" : undefined}
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
                   active
-                    ? (dark ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/30 shadow-md font-semibold" : "bg-white text-[#a07432] border border-[#eee6da] shadow-sm font-semibold")
-                    : `${mutedText} ${dark ? "hover:bg-[#121826] hover:text-[#f1f5f9]" : "hover:bg-[#f4eee4] hover:text-[#1c1917]"}`
+                    ? dark
+                      ? "bg-[#3758F9]/15 text-[#5475F9] font-semibold shadow-xs"
+                      : "bg-[#ECF2FE] text-[#3758F9] font-semibold shadow-xs"
+                    : dark
+                      ? "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                      : "text-[#475467] hover:text-[#1D2939] hover:bg-[#F2F4F7]"
                 }`}
               >
-                <item.icon size={18} className={active ? (dark ? "text-[#cca45f]" : "text-[#a07432]") : (dark ? "text-slate-400" : "text-slate-500")} />
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.badge !== undefined && (
-                  <span
-                    className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
-                      active
-                        ? (dark ? "bg-[#cca45f]/20 text-[#cca45f]" : "bg-[#f5eddf] text-[#a07432]")
-                        : (dark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-700")
-                    }`}
-                  >
-                    {item.badge}
-                  </span>
-                )}
+                <item.icon size={17} className={active ? (dark ? "text-[#5475F9]" : "text-[#3758F9]") : (dark ? "text-slate-400" : "text-[#667085]")} />
+                <span className="flex-1 text-left truncate">{item.label}</span>
               </button>
             );
           })}
         </nav>
 
         {/* Bottom Actions */}
-        <div className="p-4 border-t border-inherit space-y-3">
-          <div className="flex items-center gap-2.5 px-2 py-1">
-            <div className="h-8 w-8 rounded-lg bg-cyan-600/20 text-cyan-400 font-bold flex items-center justify-center text-xs border border-cyan-500/30 shrink-0">
-              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "S"}
+        <div className={`p-4 border-t ${dark ? "border-slate-800" : "border-slate-200/80"} space-y-3`}>
+          <div className={`flex items-center gap-2.5 px-3 py-2 rounded-xl ${dark ? "bg-slate-800/40 border border-slate-800" : "bg-slate-50 border border-slate-200/80"}`}>
+            <div className={`h-8 w-8 rounded-lg font-bold flex items-center justify-center text-xs shrink-0 ${dark ? "bg-white text-black" : "bg-slate-900 text-white"} shadow-2xs`}>
+              {currentUser?.name ? currentUser.name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() : "SE"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold truncate leading-tight">{currentUser?.name || "Sales Executive"}</p>
-              <p className={`text-[10px] truncate leading-tight ${mutedText}`}>{currentUser?.email || "sales@zootechx.com"}</p>
+              <div className="flex items-center gap-1.5">
+                <p className={`text-xs font-bold truncate leading-tight ${dark ? "text-white" : "text-slate-900"}`}>{currentUser?.name || "Sales Executive"}</p>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+              </div>
+              <p className="text-[10px] truncate leading-tight text-slate-500 dark:text-slate-400">{currentUser?.email || "sales@zootechx"}</p>
             </div>
           </div>
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"
           >
             <LogOut size={15} />
             <span>Log out</span>
@@ -320,73 +346,211 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
 
       {/* MAIN VIEWPORT */}
       <div className="flex-1 min-w-0 h-screen flex flex-col overflow-hidden">
-        {/* HEADER */}
-        <header className={`w-full h-16 shrink-0 border-b flex items-center justify-between px-4 sm:px-6 backdrop-blur-xl ${bgSidebar}`}>
-          <div className="flex items-center gap-3">
-            <h2 className={`text-lg font-bold tracking-tight capitalize ${dark ? "text-white" : "text-slate-900"}`}>
-              {page === "dashboard"
-                ? "Sales Radar"
-                : page === "leads"
-                ? "Lead Intelligence"
-                : page === "followups"
-                ? "Follow-up Queue"
-                : page === "sows"
-                ? "Scope of Work (SOW)"
-                : page === "tasks"
-                ? "Company Tasks"
-                : "Client Directory"}
-            </h2>
-            <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 px-2.5 py-0.5 text-[10px] font-bold text-cyan-400">
-              {currentUser?.name ? `${currentUser.name} • Sales` : "Live Shared CRM"}
+        {/* HEADER - Exact TailAdmin Layout matching demo.tailadmin.com */}
+        <header className={`w-full h-[68px] shrink-0 border-b flex items-center justify-between gap-4 px-4 sm:px-6 transition-colors duration-200 relative z-30 ${
+          dark
+            ? "bg-[#090d16] border-slate-800 text-white shadow-[0_2px_12px_-2px_rgba(0,0,0,0.3)]"
+            : "bg-white border-slate-200/90 text-slate-900 shadow-[0_2px_12px_-2px_rgba(15,23,42,0.04)]"
+        }`}>
+          {/* Left: Sidebar Collapse Toggle + Search Bar */}
+          <div className="flex items-center gap-3.5 flex-1 max-w-[500px]">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="h-10 w-10 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs transition shrink-0"
+              title="Toggle Sidebar"
+            >
+              <Menu size={18} />
+            </button>
+
+            <div ref={searchContainerRef} className="flex items-center flex-1 relative">
+              <Search size={16} className={`absolute left-3.5 ${query ? "text-cyan-500" : "text-slate-400"} transition-colors pointer-events-none`} />
+              <input
+                value={query}
+                onFocus={() => setIsSearchOpen(true)}
+                onChange={(e) => { setQuery(e.target.value); setIsSearchOpen(true); }}
+                placeholder="Search or type command..."
+                className={`w-full h-10 pl-10 pr-14 rounded-xl border text-sm transition-all outline-none shadow-2xs ${
+                  dark
+                    ? "bg-slate-900/90 border-slate-800 text-slate-100 placeholder-slate-500 focus:border-cyan-500/80 focus:bg-slate-900 focus:ring-2 focus:ring-cyan-500/20"
+                    : "bg-slate-50/70 border-slate-200/90 text-slate-900 placeholder-slate-400 hover:bg-slate-50 focus:bg-white focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/15"
+                }`}
+              />
+              {query ? (
+                <button
+                  type="button"
+                  onClick={() => { setQuery(""); setIsSearchOpen(false); }}
+                  className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-md transition"
+                  title="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              ) : (
+                <span className="absolute right-3 text-[11px] font-mono text-slate-400 border border-slate-200 dark:border-slate-700/60 rounded px-1.5 py-0.5 bg-white dark:bg-slate-800 pointer-events-none">
+                  ⌘K
+                </span>
+              )}
+
+              {query && isSearchOpen && (
+                <div className={`absolute top-12 left-0 w-full rounded-2xl border shadow-2xl z-30 max-h-[320px] overflow-auto ${bgCard} p-2`}>
+                  {searchMatches.leads.length > 0 && (
+                    <div>
+                      <div className="px-2 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Leads</div>
+                      {searchMatches.leads.map(lead => (
+                        <button key={lead.id} onClick={() => { setPage("leads"); setSelectedLead(lead); setQuery(""); setIsSearchOpen(false); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${dark ? "bg-white/5" : "bg-slate-50"}`}>
+                          <div className="h-8 w-8 rounded-full bg-cyan-600 text-white flex items-center justify-center text-[11px] font-bold">
+                            {lead.full_name ? lead.full_name.charAt(0) : "L"}
+                          </div>
+                          <div>
+                            <div className="text-[13px] font-medium">{lead.full_name}</div>
+                            <div className="text-[11px] text-slate-400">{lead.company || lead.email}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {searchMatches.clients.length > 0 && (
+                    <div>
+                      <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Clients</div>
+                      {searchMatches.clients.map(client => (
+                        <button key={client.id} onClick={() => { setPage("clients"); setQuery(""); setIsSearchOpen(false); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${dark ? "bg-white/5" : "bg-slate-50"}`}>
+                          <div className="h-8 w-8 rounded-xl bg-emerald-600/10 text-emerald-400 flex items-center justify-center">
+                            <Users size={14} />
+                          </div>
+                          <div>
+                            <div className="text-[13px] font-medium">{client.name}</div>
+                            <div className="text-[11px] text-slate-400">{client.company || client.email}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {searchMatches.followups.length > 0 && (
+                    <div>
+                      <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Follow-ups</div>
+                      {searchMatches.followups.map(f => (
+                        <button key={f.id} onClick={() => { setPage("followups"); setQuery(""); setIsSearchOpen(false); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${dark ? "bg-white/5" : "bg-slate-50"}`}>
+                          <div className="h-8 w-8 rounded-xl bg-cyan-600/10 text-cyan-400 flex items-center justify-center">
+                            <CalendarDays size={14} />
+                          </div>
+                          <div>
+                            <div className="text-[13px] font-medium">{f.lead_name}</div>
+                            <div className="text-[11px] text-slate-400">{f.type} · {f.followup_date}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {searchMatches.leads.length === 0 && searchMatches.clients.length === 0 && searchMatches.followups.length === 0 && (
+                    <div className="p-3 text-[13px] text-slate-400">No matching leads or clients found</div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
+          <div className="flex-1" />
+
+          {/* Right: Actions, Theme Toggle, Notifications, Profile */}
           <div className="flex items-center gap-3">
-            {/* Day & Night Theme Toggle Button */}
+            <button
+              onClick={() => void load()}
+              title="Refresh Sales Data"
+              className="h-10 w-10 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs transition shrink-0"
+            >
+              <RefreshCw size={15} className={loading ? "animate-spin text-cyan-500" : ""} />
+            </button>
+
+            {/* Circular Theme Toggle Button (TailAdmin style) */}
             <button
               onClick={handleToggleTheme}
-              title={dark ? "Switch to Day (Light Mode)" : "Switch to Night (Dark Mode)"}
-              aria-label={dark ? "Switch to Day (Light Mode)" : "Switch to Night (Dark Mode)"}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${
-                dark 
-                  ? "bg-[#121826] border-[#1e293b] text-[#f1f5f9] hover:border-[#cca45f]/40 shadow-sm" 
-                  : "bg-white border-[#eee6da] text-[#1c1917] hover:border-[#a07432]/40 shadow-sm"
-              }`}
+              title={dark ? "Switch to Day Mode" : "Switch to Night Mode"}
+              className="h-10 w-10 rounded-full border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs transition shrink-0"
             >
-              {dark ? (
-                <Moon size={13} className="text-[#cca45f]" />
-              ) : (
-                <Sun size={13} className="text-amber-500" />
-              )}
-              <span className="text-[10px] font-bold tracking-widest uppercase font-mono">
-                {dark ? "NIGHT" : "DAY"}
-              </span>
-              <div className={`w-8 h-4 rounded-full p-0.5 transition-colors flex items-center ${
-                dark ? "bg-[#090d16] justify-end" : "bg-[#ede5d8] justify-start"
-              }`}>
-                <div className={`w-3 h-3 rounded-full shadow transition-transform ${
-                  dark ? "bg-[#cca45f]" : "bg-[#b88a44]"
-                }`} />
-              </div>
+              {dark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
             </button>
-            {/* Mobile buttons */}
-            <div className="flex md:hidden items-center gap-1">
-              {menu.map((it) => (
-                <button
-                  key={it.id}
-                  onClick={() => {
-                    setPage(it.id);
-                    setSelectedLead(null);
-                  }}
-                  className={`p-2 rounded-xl border ${
-                    page === it.id
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : (dark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-600 hover:bg-slate-100")
-                  }`}
-                >
-                  <it.icon size={16} />
-                </button>
-              ))}
+
+            {/* Circular Notification Bell with Orange Dot (TailAdmin style) */}
+            <div ref={notifContainerRef} className="relative">
+              <button
+                onClick={() => setNotifOpen(!notifOpen)}
+                title="Notifications"
+                aria-label="View notifications"
+                className="h-10 w-10 rounded-full border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs relative transition shrink-0"
+              >
+                <Bell size={18} />
+                {pendingFollowups.length > 0 && (
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#f97316] ring-2 ring-white dark:ring-slate-900" />
+                )}
+              </button>
+              {notifOpen && (
+                <div className={`absolute right-0 top-12 w-[340px] rounded-2xl border shadow-2xl z-40 ${bgCard} overflow-hidden`}>
+                  <div className={`p-4 border-b ${dark ? "border-slate-800" : "border-slate-100"}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="font-bold text-[14px]">Follow-up Queue</div>
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/15 text-cyan-500 border border-cyan-500/30">
+                          SALES
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-400">{pendingFollowups.length} scheduled</span>
+                    </div>
+                  </div>
+                  <div className="max-h-[300px] overflow-auto divide-y divide-slate-100 dark:divide-slate-800">
+                    {pendingFollowups.slice(0, 6).map((f) => (
+                      <div key={f.id} onClick={() => { setPage("followups"); setNotifOpen(false); }} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition flex items-start gap-2.5">
+                        <div className="w-2 h-2 rounded-full bg-cyan-500 mt-1.5 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">{f.lead_name}</p>
+                          <p className="text-[11px] text-slate-400 truncate">{f.type} · {f.followup_date}</p>
+                        </div>
+                      </div>
+                    ))}
+                    {pendingFollowups.length === 0 && (
+                      <div className="p-6 text-center text-xs text-slate-400">All follow-ups complete 🎉</div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* User Profile Pill (TailAdmin style: avatar + name + chevron) */}
+            <div ref={userMenuRef} className="relative">
+              <button
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                className="flex items-center gap-2.5 pl-2 py-1 pr-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800/60 transition group"
+              >
+                <div className="w-10 h-10 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-sm flex items-center justify-center overflow-hidden shrink-0 shadow-xs ring-1 ring-slate-900/10 dark:ring-white/20">
+                  {currentUser?.name ? currentUser.name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() : "SE"}
+                </div>
+                <span className="hidden sm:inline text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white transition">
+                  {currentUser?.name?.split(" ")[0] || "Sales"}
+                </span>
+                <ChevronDown size={15} className={`text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-transform duration-200 ${userDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+              {userDropdownOpen && (
+                <div className={`absolute right-0 top-12 w-56 rounded-2xl border shadow-2xl z-30 p-2 ${bgCard}`}>
+                  <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser?.name || "Sales Executive"}</p>
+                    <p className="text-[11px] text-slate-400 truncate">{currentUser?.email || "sales@zootechx"}</p>
+                  </div>
+                  <button
+                    onClick={() => { setPage("dashboard"); setUserDropdownOpen(false); }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:${dark ? "bg-white/5" : "bg-slate-100"} transition`}
+                  >
+                    <Settings size={14} />
+                    <span>Sales Radar</span>
+                  </button>
+                  <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                  <button
+                    onClick={() => { setUserDropdownOpen(false); onLogout(); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-500 hover:bg-rose-500/10 transition"
+                  >
+                    <LogOut size={14} />
+                    <span>Sign out</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -438,76 +602,62 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                 </div>
               </div>
 
-              {/* 4 KPI Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* 4 TailAdmin KPI Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {/* Metric 1: Total Leads */}
-                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Total Pipeline</span>
-                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                      <Target size={18} />
-                    </div>
+                <div className="tail-card p-5 md:p-6">
+                  <div className="tail-metric-icon mb-5">
+                    <Target size={24} className="text-cyan-600 dark:text-cyan-400" />
                   </div>
-                  <div className="mt-3">
-                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
-                      {totalLeadsCount}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-cyan-400 font-medium">
-                      <span>Active pipeline prospects</span>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Pipeline</p>
+                  <div className="mt-3 flex items-end justify-between">
+                    <h4 className="text-2xl lg:text-3xl font-bold text-slate-800 dark:text-white font-mono">{totalLeadsCount}</h4>
+                    <div className="flex items-center gap-1.5">
+                      <span className="tail-badge-info">+12%</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Metric 2: Win / Conversion Rate */}
-                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Conversion Rate</span>
-                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      <TrendingUp size={18} />
-                    </div>
+                <div className="tail-card p-5 md:p-6">
+                  <div className="tail-metric-icon mb-5">
+                    <TrendingUp size={24} className="text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <div className="mt-3">
-                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
-                      {conversionRate}%
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-400 font-medium">
-                      <span>{convertedLeads.length} deals successfully closed</span>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Conversion Rate</p>
+                  <div className="mt-3 flex items-end justify-between">
+                    <h4 className="text-2xl lg:text-3xl font-bold text-slate-800 dark:text-white font-mono">{conversionRate}%</h4>
+                    <div className="flex items-center gap-1.5">
+                      <span className="tail-badge-success">{convertedLeads.length} won</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Metric 3: Pending Follow-ups */}
-                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Pending Touches</span>
-                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                      <Clock size={18} />
-                    </div>
+                <div className="tail-card p-5 md:p-6">
+                  <div className="tail-metric-icon mb-5">
+                    <Clock size={24} className="text-amber-600 dark:text-amber-400" />
                   </div>
-                  <div className="mt-3">
-                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
-                      {pendingFollowupsList.length}
-                    </div>
-                    <div className={`flex items-center gap-1.5 mt-1 text-[11px] font-medium ${pendingFollowupsList.length > 0 ? "text-amber-400" : "text-emerald-400"}`}>
-                      <span>{pendingFollowupsList.length > 0 ? "Requires sales follow-up" : "All touches completed"}</span>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Pending Touches</p>
+                  <div className="mt-3 flex items-end justify-between">
+                    <h4 className="text-2xl lg:text-3xl font-bold text-slate-800 dark:text-white font-mono">{pendingFollowupsList.length}</h4>
+                    <div className="flex items-center gap-1.5">
+                      <span className={pendingFollowupsList.length > 0 ? "tail-badge-warning" : "tail-badge-success"}>
+                        {pendingFollowupsList.length > 0 ? "Action needed" : "All cleared"}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Metric 4: Corporate Clients */}
-                <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Corporate Clients</span>
-                    <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                      <Building size={18} />
-                    </div>
+                <div className="tail-card p-5 md:p-6">
+                  <div className="tail-metric-icon mb-5">
+                    <Building size={24} className="text-purple-600 dark:text-purple-400" />
                   </div>
-                  <div className="mt-3">
-                    <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
-                      {clients.length}
-                    </div>
-                    <div className="flex items-center gap-1.5 mt-1 text-[11px] text-purple-400 font-medium">
-                      <span>Retained business accounts</span>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Corporate Clients</p>
+                  <div className="mt-3 flex items-end justify-between">
+                    <h4 className="text-2xl lg:text-3xl font-bold text-slate-800 dark:text-white font-mono">{clients.length}</h4>
+                    <div className="flex items-center gap-1.5">
+                      <span className="tail-badge-info">Retained</span>
                     </div>
                   </div>
                 </div>
@@ -527,7 +677,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
 
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   {/* Stage 1: New */}
-                  <div className={`p-3 rounded-xl border ${dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"}`}>
+                  <div className={`p-3 rounded-xl border ${dark ? "border-zinc-800 bg-[#09090b]" : "border-zinc-200 bg-zinc-50"}`}>
                     <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">1. Discovery / New</div>
                     <div className="text-xl font-bold font-mono mt-1 text-sky-400">{stageStats.newCount}</div>
                     <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
@@ -539,7 +689,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                   </div>
 
                   {/* Stage 2: Contacted */}
-                  <div className={`p-3 rounded-xl border ${dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"}`}>
+                  <div className={`p-3 rounded-xl border ${dark ? "border-zinc-800 bg-[#09090b]" : "border-zinc-200 bg-zinc-50"}`}>
                     <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">2. Contacted</div>
                     <div className="text-xl font-bold font-mono mt-1 text-indigo-400">{stageStats.contactedCount}</div>
                     <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
@@ -551,7 +701,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                   </div>
 
                   {/* Stage 3: Qualified */}
-                  <div className={`p-3 rounded-xl border ${dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"}`}>
+                  <div className={`p-3 rounded-xl border ${dark ? "border-zinc-800 bg-[#09090b]" : "border-zinc-200 bg-zinc-50"}`}>
                     <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">3. Qualified</div>
                     <div className="text-xl font-bold font-mono mt-1 text-amber-400">{stageStats.qualifiedCount}</div>
                     <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
@@ -563,7 +713,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                   </div>
 
                   {/* Stage 4: Proposal */}
-                  <div className={`p-3 rounded-xl border ${dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"}`}>
+                  <div className={`p-3 rounded-xl border ${dark ? "border-zinc-800 bg-[#09090b]" : "border-zinc-200 bg-zinc-50"}`}>
                     <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">4. Proposal / Neg.</div>
                     <div className="text-xl font-bold font-mono mt-1 text-purple-400">{stageStats.negotiationCount}</div>
                     <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
@@ -575,7 +725,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                   </div>
 
                   {/* Stage 5: Won */}
-                  <div className={`p-3 rounded-xl border ${dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"}`}>
+                  <div className={`p-3 rounded-xl border ${dark ? "border-zinc-800 bg-[#09090b]" : "border-zinc-200 bg-zinc-50"}`}>
                     <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">5. Converted / Won</div>
                     <div className="text-xl font-bold font-mono mt-1 text-emerald-400">{stageStats.wonCount}</div>
                     <div className="mt-2 h-1.5 rounded-full bg-white/5 overflow-hidden">
@@ -628,7 +778,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                               setPage("leads");
                             }}
                             className={`p-3.5 rounded-xl border flex items-center justify-between cursor-pointer hover:border-cyan-500/30 transition ${
-                              dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                              dark ? "border-zinc-800 bg-[#09090b] hover:bg-zinc-900" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
                             }`}
                           >
                             <div className="min-w-0 flex-1 pr-3">
@@ -698,7 +848,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                           <div
                             key={f.id}
                             className={`p-3 rounded-xl border flex items-center justify-between gap-3 ${
-                              dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"
+                              dark ? "border-zinc-800 bg-[#09090b]" : "border-zinc-200 bg-zinc-50"
                             }`}
                           >
                             <div className="min-w-0 flex-1">
@@ -750,7 +900,7 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
                           <div
                             key={c.id}
                             className={`p-2.5 rounded-xl border flex items-center justify-between ${
-                              dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"
+                              dark ? "border-zinc-800 bg-[#09090b]" : "border-zinc-200 bg-zinc-50"
                             }`}
                           >
                             <div className="min-w-0 flex-1">
@@ -954,6 +1104,22 @@ export default function SalesDashboard({ onLogout, dark: propDark = true, onTogg
           {/* TAB: CLIENTS */}
           {page === "clients" && (
             <div className="space-y-6 max-w-[1600px] mx-auto w-full">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className={`text-2xl font-bold tracking-tight ${dark ? "text-white" : "text-slate-900"}`}>
+                    Client Directory
+                  </h3>
+                  <p className={`text-xs mt-1 ${mutedText}`}>
+                    Enterprise accounts, corporate contacts, billing info, and active projects.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400">
+                    {filteredClients.length} Corporate Accounts
+                  </span>
+                </div>
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {filteredClients.map((client) => (
                   <div

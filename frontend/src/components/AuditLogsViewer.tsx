@@ -66,11 +66,11 @@ export default function AuditLogsViewer({ dark = true }: { dark?: boolean }) {
   }, [logs, filterEntity, query]);
 
   // Styling Tokens
-  const cardBg = dark ? "bg-[#111622] border-[#222d42]" : "bg-white border-[#eee6da]";
-  const muted = dark ? "text-[#94a3b8]" : "text-[#78716c]";
+  const cardBg = dark ? "bg-black border-zinc-800" : "bg-white border-zinc-200";
+  const muted = dark ? "text-zinc-400" : "text-zinc-600";
   const inputBg = dark
-    ? "bg-[#171f30] border-[#222d42] text-[#f1f5f9] placeholder:text-[#64748b]"
-    : "bg-[#fbf8f3] border-[#e8dfd1] text-[#1c1917] placeholder:text-[#a8a29e]";
+    ? "bg-[#09090b] border-zinc-800 text-white placeholder:text-zinc-500 focus:border-zinc-500"
+    : "bg-white border-zinc-300 text-black placeholder:text-zinc-400 focus:border-black";
 
   return (
     <div className="space-y-6">
@@ -87,9 +87,7 @@ export default function AuditLogsViewer({ dark = true }: { dark?: boolean }) {
         <button
           onClick={loadLogs}
           disabled={loading}
-          className={`h-10 px-4 rounded-xl border flex items-center gap-2 text-xs font-semibold transition ${
-            dark ? "border-[#222d42] hover:bg-white/5 text-[#cca45f]" : "border-[#eee6da] hover:bg-black/5 text-[#a07432]"
-          }`}
+          className="tail-btn-secondary flex items-center gap-2"
         >
           <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           <span>Refresh Trail</span>
@@ -97,7 +95,7 @@ export default function AuditLogsViewer({ dark = true }: { dark?: boolean }) {
       </div>
 
       {/* Filter Bar */}
-      <div className={`rounded-2xl border p-3.5 flex flex-col sm:flex-row gap-3 items-center justify-between ${cardBg}`}>
+      <div className="tail-card p-3 flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
           <Search size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${muted}`} />
           <input
@@ -114,10 +112,8 @@ export default function AuditLogsViewer({ dark = true }: { dark?: boolean }) {
               onClick={() => setFilterEntity(ent)}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap transition ${
                 filterEntity === ent
-                  ? dark
-                    ? "bg-[#cca45f] text-black shadow-sm font-bold"
-                    : "bg-[#a07432] text-white shadow-sm font-bold"
-                  : `${muted} hover:bg-white/5`
+                  ? "bg-indigo-600 text-white shadow-xs font-bold"
+                  : `${muted} hover:bg-slate-100 dark:hover:bg-slate-800`
               }`}
             >
               {ent === "ALL" ? "All Entities" : ent}
@@ -127,10 +123,10 @@ export default function AuditLogsViewer({ dark = true }: { dark?: boolean }) {
       </div>
 
       {/* Audit Log Table */}
-      <div className={`rounded-2xl border overflow-hidden ${cardBg} shadow-sm`}>
+      <div className="tail-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[750px] text-left text-xs">
-            <thead className={`border-b ${dark ? "bg-[#171f30]/60 border-[#222d42]" : "bg-[#f5eddf]/50 border-[#eee6da]"} ${muted} uppercase tracking-wider text-[10px]`}>
+            <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[10px]">
               <tr>
                 <th className="p-3.5">Timestamp</th>
                 <th className="p-3.5">Action</th>
@@ -139,7 +135,7 @@ export default function AuditLogsViewer({ dark = true }: { dark?: boolean }) {
                 <th className="p-3.5">Details & Description</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${dark ? "divide-[#222d42]" : "divide-[#eee6da]"}`}>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className={`p-12 text-center text-xs ${muted}`}>

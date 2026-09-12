@@ -181,12 +181,12 @@ export default function UniversalTasksWorkspace({
     });
   }, [tasks, statusFilter, query]);
 
-  // Styling Tokens
-  const cardBg = dark ? "bg-[#111622] border-[#222d42]" : "bg-white border-[#eee6da]";
-  const muted = dark ? "text-[#94a3b8]" : "text-[#78716c]";
+  // Styling Tokens matching screenshot
+  const cardBg = dark ? "bg-[#0f172a] border-slate-800 text-slate-100 shadow-sm" : "bg-white border-slate-200/80 text-slate-900 shadow-sm";
+  const muted = dark ? "text-slate-400" : "text-slate-500";
   const inputBg = dark
-    ? "bg-[#171f30] border-[#222d42] text-[#f1f5f9] placeholder:text-[#64748b]"
-    : "bg-[#fbf8f3] border-[#e8dfd1] text-[#1c1917] placeholder:text-[#a8a29e]";
+    ? "bg-[#090d16] border-slate-800 text-slate-100 placeholder:text-slate-500 focus:border-slate-600"
+    : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-slate-400";
 
   return (
     <div className="space-y-6">
@@ -213,7 +213,7 @@ export default function UniversalTasksWorkspace({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className={`text-2xl font-bold tracking-tight ${dark ? "text-white" : "text-[#1c1917]"}`}>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             Company Task Orchestrator
           </h1>
           <p className={`text-xs mt-1 ${muted}`}>
@@ -224,43 +224,54 @@ export default function UniversalTasksWorkspace({
           <button
             onClick={loadData}
             disabled={loading}
-            className={`h-10 w-10 rounded-xl border flex items-center justify-center transition ${
-              dark ? "border-[#222d42] hover:bg-white/5 text-[#cca45f]" : "border-[#eee6da] hover:bg-black/5 text-[#a07432]"
-            }`}
+            className="tail-btn-secondary flex h-9 w-9 items-center justify-center p-0"
           >
-            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>
           {canCreate && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className={`h-10 px-4 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md ${
-                dark ? "bg-[#cca45f] text-black hover:bg-[#d8b26e]" : "bg-[#a07432] text-white hover:bg-[#8f6426]"
-              }`}
+              className="tail-btn-primary flex items-center gap-2"
             >
-              <Plus size={15} />
+              <Plus size={14} />
               <span>Create Task</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Stats Cards - TailAdmin Metric style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Tasks", value: tasks.length, color: "text-[#cca45f]" },
-          { label: "In Progress", value: tasks.filter((t) => t.status === "IN_PROGRESS").length, color: "text-blue-400" },
-          { label: "Urgent Priority", value: tasks.filter((t) => t.priority === "URGENT").length, color: "text-rose-400" },
-          { label: "Completed", value: tasks.filter((t) => t.status === "COMPLETED").length, color: "text-emerald-400" },
+          { label: "Total Tasks", value: tasks.length, icon: CheckSquare, bg: "bg-indigo-500/10 text-indigo-500", tag: "Backlog" },
+          { label: "In Progress", value: tasks.filter((t) => t.status === "IN_PROGRESS").length, icon: Clock, bg: "bg-blue-500/10 text-blue-500", tag: "Active" },
+          { label: "Urgent Priority", value: tasks.filter((t) => t.priority === "URGENT").length, icon: AlertTriangle, bg: "bg-rose-500/10 text-rose-500", tag: "Urgent" },
+          { label: "Completed", value: tasks.filter((t) => t.status === "COMPLETED").length, icon: CheckCircle2, bg: "bg-emerald-500/10 text-emerald-500", tag: "Done" },
         ].map((item) => (
-          <div key={item.label} className={`rounded-2xl border p-4 ${cardBg} shadow-sm`}>
-            <div className={`text-[11px] font-semibold uppercase tracking-wider ${muted}`}>{item.label}</div>
-            <div className={`mt-2 text-2xl font-bold mono ${item.color}`}>{item.value}</div>
+          <div key={item.label} className="tail-card p-5 flex items-start justify-between">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                {item.label}
+              </span>
+              <h4 className="mt-2 text-2xl font-bold font-mono text-slate-900 dark:text-white">
+                {item.value}
+              </h4>
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live
+                </span>
+                <span>• {item.tag}</span>
+              </div>
+            </div>
+            <div className={`tail-metric-icon ${item.bg}`}>
+              <item.icon size={22} />
+            </div>
           </div>
         ))}
       </div>
 
       {/* Filter Bar */}
-      <div className={`rounded-2xl border p-3.5 flex flex-col sm:flex-row gap-3 items-center justify-between ${cardBg}`}>
+      <div className="tail-card p-3 flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
           <Search size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${muted}`} />
           <input
@@ -275,12 +286,10 @@ export default function UniversalTasksWorkspace({
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
-              className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap transition ${
+              className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap transition-all ${
                 statusFilter === st
-                  ? dark
-                    ? "bg-[#cca45f] text-black shadow-sm font-bold"
-                    : "bg-[#a07432] text-white shadow-sm font-bold"
-                  : `${muted} hover:bg-white/5`
+                  ? "bg-indigo-600 text-white shadow-xs font-bold"
+                  : `${muted} hover:bg-slate-100 dark:hover:bg-slate-800`
               }`}
             >
               {st === "ALL" ? "All Tasks" : statusStyles[st as keyof typeof statusStyles]?.label || st}
@@ -292,7 +301,7 @@ export default function UniversalTasksWorkspace({
       {/* Tasks Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.length === 0 ? (
-          <div className={`col-span-full rounded-2xl border p-12 text-center text-xs ${cardBg} ${muted}`}>
+          <div className="col-span-full tail-card p-12 text-center text-xs text-slate-500 dark:text-slate-400">
             No tasks found matching your criteria.
           </div>
         ) : (
@@ -305,7 +314,7 @@ export default function UniversalTasksWorkspace({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 onClick={() => setViewTask(task)}
-                className={`rounded-2xl border p-4 ${cardBg} shadow-sm flex flex-col justify-between hover:border-[#cca45f]/60 hover:shadow-md cursor-pointer transition`}
+                className="tail-card p-4 flex flex-col justify-between hover:border-indigo-500/50 hover:shadow-md cursor-pointer transition"
               >
                 <div>
                   <div className="flex items-center justify-between gap-2">
@@ -317,7 +326,7 @@ export default function UniversalTasksWorkspace({
                     </span>
                   </div>
 
-                  <h4 className={`mt-3 font-semibold text-sm leading-snug ${dark ? "text-[#f1f5f9]" : "text-[#1c1917]"}`}>
+                  <h4 className={`mt-3 font-semibold text-sm leading-snug ${dark ? "text-white" : "text-black"}`}>
                     {task.title}
                   </h4>
                   <p className={`mt-1.5 text-xs line-clamp-2 leading-relaxed ${muted}`}>
@@ -326,11 +335,11 @@ export default function UniversalTasksWorkspace({
 
                   <div className="mt-3 pt-2.5 border-t border-inherit/60 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                     <div className={`flex items-center gap-1.5 ${muted}`}>
-                      <User size={12} className="text-[#cca45f]" />
-                      <span>Created by: <strong className={`font-semibold ${dark ? "text-slate-200" : "text-slate-800"}`}>{task.created_by_name || "Super Admin"}</strong></span>
+                      <User size={12} className={dark ? "text-zinc-400" : "text-zinc-600"} />
+                      <span>Created by: <strong className={`font-semibold ${dark ? "text-zinc-200" : "text-zinc-800"}`}>{task.created_by_name || "Super Admin"}</strong></span>
                     </div>
                     {task.related_name && (
-                      <div className="flex items-center gap-1 font-medium text-[#cca45f]">
+                      <div className={`flex items-center gap-1 font-medium ${dark ? "text-zinc-300" : "text-zinc-700"}`}>
                         <Tag size={12} />
                         <span className="truncate max-w-[140px]">{task.related_name} ({task.related_type})</span>
                       </div>
@@ -502,16 +511,14 @@ export default function UniversalTasksWorkspace({
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className={`px-4 py-2 rounded-xl text-xs font-semibold border ${dark ? "border-[#222d42]" : "border-[#eee6da]"}`}
+                    className="tail-btn-secondary"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
-                    className={`px-5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                      dark ? "bg-[#cca45f] text-black font-bold" : "bg-[#a07432] text-white font-bold"
-                    }`}
+                    className="tail-btn-primary flex items-center gap-2"
                   >
                     {saving ? <RefreshCw size={14} className="animate-spin" /> : <CheckSquare size={14} />}
                     <span>Assign Task</span>
@@ -545,7 +552,7 @@ export default function UniversalTasksWorkspace({
                       {statusStyles[viewTask.status]?.label}
                     </span>
                     {viewTask.related_name && (
-                      <span className="flex items-center gap-1 text-[11px] font-medium text-[#cca45f]">
+                      <span className={`flex items-center gap-1 text-[11px] font-medium ${dark ? "text-zinc-300" : "text-zinc-700"}`}>
                         <Tag size={12} />
                         {viewTask.related_name} ({viewTask.related_type})
                       </span>
@@ -577,7 +584,7 @@ export default function UniversalTasksWorkspace({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div className={`p-3.5 rounded-2xl border ${dark ? "bg-white/5 border-white/10" : "bg-slate-50 border-slate-200"}`}>
                     <div className={`text-[10px] uppercase font-bold tracking-wider ${muted} flex items-center gap-1.5`}>
-                      <User size={12} className="text-[#cca45f]" />
+                      <User size={12} className={dark ? "text-zinc-400" : "text-zinc-600"} />
                       Created By
                     </div>
                     <div className={`mt-1.5 font-semibold text-sm ${dark ? "text-white" : "text-slate-900"}`}>
@@ -631,8 +638,8 @@ export default function UniversalTasksWorkspace({
                     </select>
                   </div>
                 ) : (
-                  <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between ${dark ? "bg-white/5 border-white/10 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-600"}`}>
-                    <span className="font-medium">Task Status: <span className="font-semibold text-[#cca45f]">{statusStyles[viewTask.status]?.label || viewTask.status}</span></span>
+                  <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between ${dark ? "bg-white/5 border-white/10 text-zinc-400" : "bg-zinc-50 border-zinc-200 text-zinc-600"}`}>
+                    <span className="font-medium">Task Status: <span className={`font-semibold ${dark ? "text-white" : "text-black"}`}>{statusStyles[viewTask.status]?.label || viewTask.status}</span></span>
                     <span className="text-[11px] opacity-75">Updated by Assignee ({viewTask.assigned_to_name})</span>
                   </div>
                 )}
@@ -647,7 +654,7 @@ export default function UniversalTasksWorkspace({
                   <button
                     type="button"
                     onClick={() => setViewTask(null)}
-                    className={`px-5 py-2 rounded-xl text-xs font-semibold border transition ${dark ? "border-[#222d42] hover:bg-white/5" : "border-[#eee6da] hover:bg-slate-100"}`}
+                    className="tail-btn-secondary"
                   >
                     Close
                   </button>

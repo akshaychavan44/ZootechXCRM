@@ -2,9 +2,9 @@
   "name": "zootechxcrm",
   "private": true,
   "scripts": {
-    "predev": "powershell -Command \"try { Get-NetTCPConnection -LocalPort 3000,5000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } catch {}; exit 0\"",
+    "predev": "powershell -Command \"try { (Get-NetTCPConnection -LocalPort 3000,5000 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique) | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } catch {}; exit 0\"",
     "dev": "concurrently -k -n api,web -c cyan,magenta \"npm.cmd --prefix backend run dev\" \"npm.cmd --prefix frontend run dev\"",
-    "clean": "powershell -Command \"try { Get-NetTCPConnection -LocalPort 3000,5000 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue } } catch {}; exit 0\"",
+    "clean": "powershell -Command \"try { (Get-NetTCPConnection -LocalPort 3000,5000 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique) | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue } } catch {}; exit 0\"",
     "build": "npm.cmd --prefix frontend run build",
     "start": "npm.cmd --prefix frontend run start"
   },

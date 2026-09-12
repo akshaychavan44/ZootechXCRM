@@ -16,14 +16,15 @@ const SuperAdminSettings = dynamic(() => import("./components/SuperAdminSettings
 
 import { ClientsPage, CreateInvoicePage, DashboardPage, ExpensesPage, FollowUpsPage, InvoicesPage, LeadsPage, PaymentsPage, QuotationsPage } from "./components/pages/CrmPages";
 import "./app.css";
+import ZootechXLogo from "./components/ZootechXLogo";
 import { apiFetch, AuthUser } from "./lib/api";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, UserPlus, BellRing, FileText, Plus, FileQuestion, Users,
-  CreditCard, Calculator, Settings, Search, Sun, Moon, Bell, ChevronDown, X, Eye,
-  Phone, MessageCircle, Mail, Calendar, MapPin, TrendingUp, TrendingDown, Clock,
+  CreditCard, Calculator, Settings, Search, Sun, Moon, Bell, ChevronDown, X, Eye, Menu,
+  Phone, MessageCircle, Mail, Calendar, MapPin, Clock,
   Check, AlertCircle, ArrowLeft, Save, Wand2, Sparkles, Bot, Filter, KeyRound,
   Download, Edit3, Trash2, MoreHorizontal, ChevronRight, Briefcase, Home, Store, Factory, LandPlot,
   LogOut, Crown, CheckCircle2, CheckSquare, Shield, Megaphone, ShieldCheck
@@ -234,6 +235,20 @@ export default function App() {
     return "sow-template";
   });
   const navigationReady = useRef(false); const navigationFromHistory = useRef(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const [leads, setLeads] = useState<Lead[]>([]);
 
  
@@ -899,17 +914,34 @@ export default function App() {
     });
   };
 
-  // theme classes (Nocturne & Ivory Luxury Palette)
-  const bgMain = isDark ? "bg-[#0c1017]" : "bg-[#fbf8f2]";
-  const bgCard = isDark ? "bg-[#121826] border-[#1e293b] text-[#f1f5f9]" : "bg-white border-[#eee6da] text-[#1c1917] shadow-[0_4px_20px_-2px_rgba(180,155,120,0.08)]";
-  const bgSidebar = isDark ? "bg-[#0f1420] border-[#1b2438]" : "bg-[#f8f4ec] border-[#ede5d8]";
-  const textMain = isDark ? "text-[#f1f5f9]" : "text-[#1c1917]";
-  const textMuted = isDark ? "text-[#8e9bb0]" : "text-[#78716c]";
-  const borderC = isDark ? "border-[#1b2438]" : "border-[#ede5d8]";
-  const inputCls = isDark ? "bg-[#171f30] border-[#222d42] text-[#f1f5f9] placeholder-[#5a687d]" : "bg-[#fcfaf7] border-[#e5dcd0] text-[#1c1917] placeholder-[#a8a199] shadow-sm";
-  const textPrimary = isDark ? "text-[#f1f5f9]" : "text-[#1c1917]";
-  const textSecondary = isDark ? "text-[#a0aec0]" : "text-[#57534e]";
-  const bgMuted = isDark ? "bg-[#171f30]" : "bg-[#f4eee4]";
+  // Professional SaaS Theme Palette matching screenshot
+  const bgMain = isDark ? "bg-[#090d16]" : "bg-[#f8fafc]";
+  const bgCard = isDark ? "bg-[#0f172a] border-slate-800 text-white shadow-sm" : "bg-white border-slate-200/80 text-slate-900 shadow-sm";
+  const bgSidebar = "bg-[#0b101b] border-slate-800/80 text-slate-300";
+  const textMain = isDark ? "text-slate-100" : "text-slate-900";
+  const textMuted = isDark ? "text-slate-400" : "text-slate-500";
+  const borderC = isDark ? "border-slate-800" : "border-slate-200/80";
+  const inputCls = isDark ? "bg-[#0f172a] border-slate-800 text-white placeholder-slate-500 focus:border-slate-600" : "bg-slate-50/80 border-slate-200 text-slate-900 placeholder-slate-400 shadow-xs focus:border-slate-400";
+  const textPrimary = isDark ? "text-slate-100" : "text-slate-900";
+  const textSecondary = isDark ? "text-slate-300" : "text-slate-600";
+  const bgMuted = isDark ? "bg-slate-800" : "bg-slate-100";
+  const pageTitle = ({
+    dashboard: "Overview",
+    sows: "Scope of Work",
+    leads: "Leads",
+    followups: "Follow-ups",
+    invoices: "Invoices",
+    "invoices/new": "Create invoice",
+    quotations: "Quotations",
+    clients: "Clients",
+    developers: "Developers & projects",
+    payments: "Payments",
+    tasks: "Company tasks",
+    users: "Team & Users",
+    "audit-logs": "Audit logs",
+    vault: "Credentials vault",
+    settings: "Admin settings",
+  } as Record<string, string>)[currentPage] ?? "Workspace";
   const logout = () => {
     localStorage.removeItem("zootechx_token");
     localStorage.removeItem("zootechx_user");
@@ -967,125 +999,210 @@ if (userRole === "DIGITAL_MARKETING") {
   );
 }
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }} className={`luxury-app ${isDark ? "dark-theme" : "light-theme"} premium-dashboard h-screen w-screen overflow-hidden font-sans antialiased flex ${bgMain} ${textMain} transition-colors duration-300`}>
+    <div className={`luxury-app crm-shell ${isDark ? "dark-theme" : "light-theme"} premium-dashboard h-screen w-screen overflow-hidden font-sans antialiased flex ${bgMain} ${textMain} transition-colors duration-200`}>
       
 
       {/* SIDEBAR */}
-      <aside className={`w-[260px] shrink-0 hidden lg:flex flex-col ${bgSidebar} border-r h-screen z-10`}>
-        <div className="p-5 border-b border-inherit flex items-center gap-3 relative">
-          <div className="relative">
-            <div className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-[16px] border ${
-              isDark 
-                ? "bg-[#171f30] border-[#222d42] text-[#cca45f] shadow-[0_0_15px_rgba(204,164,95,0.15)]" 
-                : "bg-white border-[#eee6da] text-[#a07432] shadow-sm"
-            }`}>Z</div>
-          </div>
-          <div>
-            <div className="font-bold leading-tight text-[15px] flex items-center gap-1.5">
-              ZootechX<span className={isDark ? "text-[#cca45f]" : "text-[#a07432]"}>.ai</span>
-              <span className={`h-1.5 w-1.5 rounded-full inline-block animate-pulse ${isDark ? "bg-[#cca45f]" : "bg-[#a07432]"}`}/>
-            </div>
-            <div className={`text-[10px] ${textMuted} font-mono uppercase tracking-widest font-semibold`}>
-              ERP SYSTEM
-            </div>
-          </div>
+      <aside className={`crm-sidebar w-[260px] shrink-0 ${sidebarOpen ? "hidden lg:flex" : "hidden"} flex-col bg-white dark:bg-[#0c1017] text-slate-700 dark:text-slate-300 border-r border-slate-200/80 dark:border-slate-800 h-screen z-20 select-none transition-all duration-300`}>
+        <div className="px-4 py-3.5 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+          <ZootechXLogo variant="full" size="sm" dark={isDark} subtitle="ERP PLATFORM" />
         </div>
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {[
-            { id:"dashboard", label:"Dashboard", icon:LayoutDashboard },
-            { id:"sows", label:"Scope of Work (SOW)", icon:FileText },
-            { id:"leads", label:"Leads Pipeline", icon:UserPlus, badge:activeLeads.length },
-            { id:"followups", label:"Follow-ups", icon:BellRing, badge:overdueFollow, badgeColor:"bg-red-500" },
-            { id:"invoices", label:"Invoices", icon:FileText },
-            { id:"invoices/new", label:"Create Invoice", icon:Plus, isNew:true },
-            { id:"quotations", label:"Quotations", icon:FileQuestion },
-            { id:"clients", label:"Clients", icon:Users },
-            { id:"developers", label:"Developers & Projects", icon:Briefcase },
-            { id:"payments", label:"Payments", icon:CreditCard },
-            { id:"tasks", label:"Company Tasks", icon:CheckSquare },
-            { id:"users", label:"Team & Users", icon:ShieldCheck },
-            { id:"audit-logs", label:"Audit Logs", icon:Shield },
-            { id:"vault", label:"Credentials Vault", icon:KeyRound },
-            { id:"settings", label:"Admin Settings", icon:Settings },
-          ].map(item=>{
-            const active = currentPage===item.id;
-            return (
-              <button key={item.id} onClick={()=> setCurrentPage(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] font-medium transition-all ${
-                  active 
-                    ? (isDark 
-                        ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/30 shadow-md font-semibold" 
-                        : "bg-white text-[#a07432] border border-[#eee6da] shadow-sm font-semibold") 
-                    : `${textMuted} hover:${isDark ? "bg-[#121826] text-[#f1f5f9]" : "bg-[#f4eee4] text-[#1c1917]"}`
-                }`}>
-                <item.icon size={18} className={item.isNew ? (isDark ? "text-[#cca45f]" : "text-[#a07432]") : ""} />
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.badge ? <span className={`text-[11px] px-1.5 py-0.5 rounded-full ${item.badgeColor||(isDark?"bg-[#cca45f] text-black font-bold":"bg-[#a07432] text-white font-bold")}`}>{item.badge}</span> : null}
-                {item.isNew ? <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isDark ? "bg-[#cca45f]/20 text-[#cca45f] border border-[#cca45f]/30" : "bg-[#f5eddf] text-[#a07432] border border-[#e8dfd1]"}`}>NEW</span> : null}
-              </button>
-            )
-          })}
+
+        <nav className="crm-navigation flex-1 px-3 py-3 space-y-4 overflow-y-auto" aria-label="Primary navigation">
+          {/* MENU */}
+          <div>
+            <div className="px-3.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8] dark:text-slate-500">
+              MENU
+            </div>
+            <div className="space-y-1">
+              {[
+                { id:"dashboard", label:"Dashboard", icon:LayoutDashboard },
+                { id:"leads", label:"Leads Pipeline", icon:UserPlus },
+                { id:"followups", label:"Follow-ups", icon:BellRing },
+                { id:"invoices", label:"Invoices", icon:FileText },
+                { id:"invoices/new", label:"Create Invoice", icon:Plus, isNew:true },
+                { id:"payments", label:"Payments", icon:CreditCard },
+                { id:"quotations", label:"Quotations", icon:FileQuestion },
+                { id:"sows", label:"Scope of Work (SOW)", icon:FileText },
+              ].map(item=>{
+                const active = currentPage===item.id;
+                return (
+                  <button key={item.id} onClick={()=> setCurrentPage(item.id)} aria-current={active ? "page" : undefined}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                      active 
+                        ? isDark
+                          ? "bg-[#3758F9]/15 text-[#5475F9] font-semibold shadow-xs"
+                          : "bg-[#ECF2FE] text-[#3758F9] font-semibold shadow-xs"
+                        : isDark
+                          ? "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                          : "text-[#475467] hover:text-[#1D2939] hover:bg-[#F2F4F7]"
+                    }`}>
+                    <item.icon size={17} className={active ? (isDark ? "text-[#5475F9]" : "text-[#3758F9]") : (isDark ? "text-slate-400" : "text-[#667085]")} />
+                    <span className="flex-1 text-left truncate">{item.label}</span>
+                    {item.isNew ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F8EE] text-[#059669] dark:bg-emerald-500/10 dark:text-emerald-400">
+                        NEW
+                      </span>
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* WORKSPACE */}
+          <div>
+            <div className="px-3.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8] dark:text-slate-500">
+              WORKSPACE
+            </div>
+            <div className="space-y-1">
+              {[
+                { id:"clients", label:"Clients", icon:Users },
+                { id:"developers", label:"Developers & Projects", icon:Briefcase },
+                { id:"marketing", label:"Marketing", icon:Megaphone },
+                { id:"tasks", label:"Company Tasks", icon:CheckSquare },
+              ].map(item=>{
+                const active = currentPage===item.id;
+                return (
+                  <button key={item.id} onClick={()=> setCurrentPage(item.id)} aria-current={active ? "page" : undefined}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                      active 
+                        ? isDark
+                          ? "bg-[#3758F9]/15 text-[#5475F9] font-semibold shadow-xs"
+                          : "bg-[#ECF2FE] text-[#3758F9] font-semibold shadow-xs"
+                        : isDark
+                          ? "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                          : "text-[#475467] hover:text-[#1D2939] hover:bg-[#F2F4F7]"
+                    }`}>
+                    <item.icon size={17} className={active ? (isDark ? "text-[#5475F9]" : "text-[#3758F9]") : (isDark ? "text-slate-400" : "text-[#667085]")} />
+                    <span className="flex-1 text-left truncate">{item.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* ADMINISTRATION */}
+          <div>
+            <div className="px-3.5 pb-2 text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8] dark:text-slate-500">
+              ADMINISTRATION
+            </div>
+            <div className="space-y-1">
+              {[
+                { id:"users", label:"Team & Users", icon:ShieldCheck },
+                { id:"vault", label:"Credentials Vault", icon:KeyRound },
+                { id:"audit-logs", label:"Audit Logs", icon:Shield },
+                { id:"settings", label:"Admin Settings", icon:Settings },
+              ].map(item=>{
+                const active = currentPage===item.id;
+                return (
+                  <button key={item.id} onClick={()=> setCurrentPage(item.id)} aria-current={active ? "page" : undefined}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                      active 
+                        ? isDark
+                          ? "bg-[#3758F9]/15 text-[#5475F9] font-semibold shadow-xs"
+                          : "bg-[#ECF2FE] text-[#3758F9] font-semibold shadow-xs"
+                        : isDark
+                          ? "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                          : "text-[#475467] hover:text-[#1D2939] hover:bg-[#F2F4F7]"
+                    }`}>
+                    <item.icon size={17} className={active ? (isDark ? "text-[#5475F9]" : "text-[#3758F9]") : (isDark ? "text-slate-400" : "text-[#667085]")} />
+                    <span className="flex-1 text-left truncate">{item.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </nav>
-        <div className={`p-3 border-t ${borderC} space-y-2`}>
-          <div className="flex items-center gap-2.5 px-2 py-1">
-            <div className="h-8 w-8 rounded-lg bg-amber-600/20 text-[#cca45f] font-bold flex items-center justify-center text-xs border border-amber-500/30 shrink-0">
-              {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "A"}
+        <div className="p-3 border-t border-slate-200/80 dark:border-slate-800 space-y-2">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+            <div className="h-8 w-8 rounded-lg font-bold flex items-center justify-center text-xs shrink-0 bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xs">
+              {currentUser?.name ? currentUser.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase() : "SA"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold truncate leading-tight">{currentUser?.name || "Super Admin"}</p>
-              <p className={`text-[10px] truncate leading-tight ${textMuted}`}>{currentUser?.email || "admin@zootechx.com"}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-bold truncate leading-tight text-slate-900 dark:text-white">{currentUser?.name || "Super Admin"}</p>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+              </div>
+              <p className="text-[10px] truncate leading-tight text-slate-500 dark:text-slate-400">{currentUser?.email || "root@zootechx"}</p>
             </div>
           </div>
-          <button onClick={logout} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] font-medium transition ${isDark ? "text-rose-400 hover:text-rose-300 hover:bg-rose-500/10" : "text-rose-600 hover:text-rose-700 hover:bg-rose-50"}`}><LogOut size={18}/>Sign out</button>
+          <button onClick={logout} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"><LogOut size={15}/><span>Sign out</span></button>
         </div>
       </aside>
 
       {/* MAIN */}
       <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-        {/* HEADER */}
-        <header className={`w-full h-[64px] sticky top-0 z-20 flex items-center justify-between gap-3 px-4 lg:px-6 border-b backdrop-blur-xl ${isDark?"bg-[#0a0d18]/80 border-white/10":"bg-white/90 border-slate-200"} relative transition-colors duration-200`}>
-          {/* animated gradient line */}
-          <div className="absolute bottom-0 left-0 right-0 h-[1px] overflow-hidden">
-            <div className="h-full w-full" style={{background:'linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4, #6366f1)', backgroundSize:'200% 100%', animation:'gradient-move 3s linear infinite'}}/>
-          </div>
-          {/* mobile menu */}
-          <div className="lg:hidden flex items-center gap-2">
-            <div className="relative">
-              <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold">Z</div>
-              <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#0f0f1a]"/>
-            </div>
-            <span className="font-bold text-[14px] flex items-center gap-1">ZootechX.ai <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"/></span>
-          </div>
+        {/* HEADER - Exact TailAdmin Layout matching demo.tailadmin.com */}
+        <header className={`crm-topbar w-full h-[68px] sticky top-0 z-30 flex items-center justify-between gap-4 px-4 sm:px-6 transition-colors duration-200 border-b ${
+          isDark
+            ? "bg-[#090d16] border-slate-800 text-white shadow-[0_2px_12px_-2px_rgba(0,0,0,0.3)]"
+            : "bg-white border-slate-200/90 text-slate-900 shadow-[0_2px_12px_-2px_rgba(15,23,42,0.04)]"
+        }`}>
+          {/* Left: Sidebar Collapse Toggle + Search Bar */}
+          <div className="flex items-center gap-3.5 flex-1 max-w-[500px]">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="h-10 w-10 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs transition shrink-0"
+              title="Toggle Sidebar"
+            >
+              <Menu size={18} />
+            </button>
 
-          <div ref={searchContainerRef} className="hidden lg:flex items-center gap-2 flex-1 max-w-[420px] relative">
-            <Search size={16} className={`absolute left-3.5 ${textMuted}`} />
-            <input value={searchQuery} onFocus={()=> setIsSearchOpen(true)} onChange={e=> { setSearchQuery(e.target.value); setIsSearchOpen(true); }} placeholder="Search leads, clients, invoices…" className={`w-full h-10 pl-10 pr-12 rounded-xl border text-[13px] outline-none ${inputCls}`} />
-            <span className={`hidden sm:inline absolute right-3 text-[10px] font-mono ${textMuted} px-1.5 py-0.5 rounded border ${borderC} ${bgMuted} pointer-events-none`}>⌘K</span>
-            {searchQuery && isSearchOpen && (
-              <div className={`absolute top-12 left-0 w-full rounded-2xl border shadow-2xl z-30 max-h-[320px] overflow-auto ${bgCard} ${borderC} p-2`}>
-                {searchMatches.leads.length > 0 && <div><div className={`px-2 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest ${textMuted}`}>Leads</div>{searchMatches.leads.map(lead => <button key={lead.id} onClick={()=> { setSelectedLead(lead); setSearchQuery(""); setIsSearchOpen(false); setCurrentPage("leads"); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${isDark?"bg-white/5":"bg-slate-50"}`}><div className="h-8 w-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[11px] font-bold">{lead.avatar}</div><div><div className="text-[13px] font-medium">{lead.name}</div><div className={`text-[11px] ${textMuted}`}>{lead.company || lead.email}</div></div></button>)}</div>}
-                {searchMatches.followUps.length > 0 && <div><div className={`px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest ${textMuted}`}>Follow-ups</div>{searchMatches.followUps.map(followUp => <button key={followUp.id} onClick={()=> { setSearchQuery(""); setIsSearchOpen(false); setCurrentPage("followups"); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${isDark?"bg-white/5":"bg-slate-50"}`}><div className={`h-8 w-8 rounded-xl flex items-center justify-center ${isDark?"bg-white/5":"bg-slate-100"}`}><BellRing size={14}/></div><div><div className="text-[13px] font-medium">{followUp.leadName}</div><div className={`text-[11px] ${textMuted}`}>{followUp.type} · {followUp.company}</div></div></button>)}</div>}
-                {searchMatches.clients.length > 0 && <div><div className={`px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest ${textMuted}`}>Clients</div>{searchMatches.clients.map(client => <button key={client.id} onClick={()=> { setSearchQuery(""); setIsSearchOpen(false); setCurrentPage("clients"); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${isDark?"bg-white/5":"bg-slate-50"}`}><div className="h-8 w-8 rounded-xl bg-emerald-600/10 text-emerald-400 flex items-center justify-center"><Users size={14}/></div><div><div className="text-[13px] font-medium">{client.businessName}</div><div className={`text-[11px] ${textMuted}`}>{client.name || client.email}</div></div></button>)}</div>}
-                {searchMatches.invoices.length > 0 && <div><div className={`px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest ${textMuted}`}>Invoices</div>{searchMatches.invoices.map(invoice => <button key={invoice.id} onClick={()=> { setSearchQuery(""); setIsSearchOpen(false); setCurrentPage("invoices"); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${isDark?"bg-white/5":"bg-slate-50"}`}><div className="h-8 w-8 rounded-xl bg-violet-600/10 text-violet-400 flex items-center justify-center"><FileText size={14}/></div><div><div className="text-[13px] font-medium">{invoice.clientName}</div><div className={`text-[11px] ${textMuted}`}>{invoice.number} · ₹{invoice.total.toLocaleString()}</div></div></button>)}</div>}
-                {searchResultCount===0 && <div className={`p-3 text-[13px] ${textMuted}`}>No matching leads, follow-ups, clients, or invoices</div>}
-              </div>
-            )}
+            <div ref={searchContainerRef} className="flex items-center flex-1 relative">
+              <Search size={16} className={`absolute left-3.5 ${searchQuery ? "text-indigo-500" : "text-slate-400"} transition-colors pointer-events-none`} />
+              <input
+                value={searchQuery}
+                onFocus={() => setIsSearchOpen(true)}
+                onChange={(e) => { setSearchQuery(e.target.value); setIsSearchOpen(true); }}
+                placeholder="Search or type command..."
+                className={`w-full h-10 pl-10 pr-14 rounded-xl border text-sm transition-all outline-none shadow-2xs ${
+                  isDark
+                    ? "bg-slate-900/90 border-slate-800 text-slate-100 placeholder-slate-500 focus:border-indigo-500/80 focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20"
+                    : "bg-slate-50/70 border-slate-200/90 text-slate-900 placeholder-slate-400 hover:bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/15"
+                }`}
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => { setSearchQuery(""); setIsSearchOpen(false); }}
+                  className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-md transition"
+                  title="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              ) : (
+                <span className="absolute right-3 text-[11px] font-mono text-slate-400 border border-slate-200 dark:border-slate-700/60 rounded px-1.5 py-0.5 bg-white dark:bg-slate-800 pointer-events-none">
+                  ⌘K
+                </span>
+              )}
+              {searchQuery && isSearchOpen && (
+                <div className={`absolute top-12 left-0 w-full rounded-2xl border shadow-2xl z-30 max-h-[320px] overflow-auto ${bgCard} p-2`}>
+                  {searchMatches.leads.length > 0 && <div><div className={`px-2 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest ${textMuted}`}>Leads</div>{searchMatches.leads.map(lead => <button key={lead.id} onClick={()=> { setSelectedLead(lead); setSearchQuery(""); setIsSearchOpen(false); setCurrentPage("leads"); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${isDark?"bg-white/5":"bg-slate-50"}`}><div className="h-8 w-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[11px] font-bold">{lead.avatar}</div><div><div className="text-[13px] font-medium">{lead.name}</div><div className={`text-[11px] ${textMuted}`}>{lead.company || lead.email}</div></div></button>)}</div>}
+                  {searchMatches.followUps.length > 0 && <div><div className={`px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest ${textMuted}`}>Follow-ups</div>{searchMatches.followUps.map(followUp => <button key={followUp.id} onClick={()=> { setSearchQuery(""); setIsSearchOpen(false); setCurrentPage("followups"); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${isDark?"bg-white/5":"bg-slate-50"}`}><div className={`h-8 w-8 rounded-xl flex items-center justify-center ${isDark?"bg-white/5":"bg-slate-100"}`}><BellRing size={14}/></div><div><div className="text-[13px] font-medium">{followUp.leadName}</div><div className={`text-[11px] ${textMuted}`}>{followUp.type} · {followUp.company}</div></div></button>)}</div>}
+                  {searchMatches.clients.length > 0 && <div><div className={`px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest ${textMuted}`}>Clients</div>{searchMatches.clients.map(client => <button key={client.id} onClick={()=> { setSearchQuery(""); setIsSearchOpen(false); setCurrentPage("clients"); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${isDark?"bg-white/5":"bg-slate-50"}`}><div className="h-8 w-8 rounded-xl bg-emerald-600/10 text-emerald-400 flex items-center justify-center"><Users size={14}/></div><div><div className="text-[13px] font-medium">{client.businessName}</div><div className={`text-[11px] ${textMuted}`}>{client.name || client.email}</div></div></button>)}</div>}
+                  {searchMatches.invoices.length > 0 && <div><div className={`px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest ${textMuted}`}>Invoices</div>{searchMatches.invoices.map(invoice => <button key={invoice.id} onClick={()=> { setSearchQuery(""); setIsSearchOpen(false); setCurrentPage("invoices"); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${isDark?"bg-white/5":"bg-slate-50"}`}><div className="h-8 w-8 rounded-xl bg-violet-600/10 text-violet-400 flex items-center justify-center"><FileText size={14}/></div><div><div className="text-[13px] font-medium">{invoice.clientName}</div><div className={`text-[11px] ${textMuted}`}>{invoice.number} · ₹{invoice.total.toLocaleString()}</div></div></button>)}</div>}
+                  {searchResultCount===0 && <div className={`p-3 text-[13px] ${textMuted}`}>No matching leads, follow-ups, clients, or invoices</div>}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex-1" />
 
+          {/* Right: Actions, Theme, Notifications, Profile */}
           <div className="flex items-center gap-3">
             {/* New dropdown */}
             <div className="relative header-new-dropdown">
-              <button onClick={()=> setNewDropdownOpen(!newDropdownOpen)} className={`header-new-btn shine-btn h-10 px-4 rounded-xl border flex items-center gap-2 text-[13px] font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] ${
-                isDark 
-                  ? "bg-[#171f30] text-[#cca45f] border-[#cca45f]/40 hover:bg-[#1f2940] shadow-md shadow-[#cca45f]/5" 
-                  : "bg-[#1c1917] text-[#faf6ee] border-[#1c1917] hover:bg-[#292524] shadow-md"
-              }`}>
-                <Plus size={16}/> <span className="hidden sm:inline">New</span> <ChevronDown size={14}/>
+              <button
+                onClick={() => setNewDropdownOpen(!newDropdownOpen)}
+                className="h-10 px-3.5 rounded-xl bg-slate-900 hover:bg-black dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm hover:shadow transition-all"
+              >
+                <Plus size={15} /> <span>New</span>
               </button>
               {newDropdownOpen && (
-                <div className={`absolute right-0 top-12 w-60 rounded-3xl border shadow-2xl z-30 p-2 ${bgCard} backdrop-blur-2xl`}>
+                <div className={`absolute right-0 top-12 w-60 rounded-2xl border shadow-2xl z-30 p-2 ${bgCard}`}>
                   {[
                     { label:"New Invoice", desc:"Create GST invoice", icon:FileText, action:()=> { setCurrentPage("invoices/new"); setNewDropdownOpen(false);} },
                     { label:"Provision User", desc:"Create sales or team login", icon:Users, action:()=> { setSettingsTab("users"); setCurrentPage("settings"); setNewDropdownOpen(false);} },
@@ -1098,8 +1215,8 @@ if (userRole === "DIGITAL_MARKETING") {
                     { label:"Store Credential", desc:"Save key or password to vault", icon:KeyRound, action:()=> { setCurrentPage("vault"); setNewDropdownOpen(false);} },
                     { label:"AI Generate Invoice", desc:"Auto from conversation", icon:Wand2, action:()=> { setCurrentPage("invoices/new"); setNewDropdownOpen(false);} },
                   ].map(i=> (
-                    <button key={i.label} onClick={i.action} className={`w-full flex items-center gap-3 p-2.5 rounded-2xl text-left hover:${isDark?"bg-white/5":"bg-[#f6f1e7]"} transition`}>
-                      <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${isDark?"bg-[#171f30] text-[#cca45f]":"bg-[#f5eddf] text-[#a07432]"}`}><i.icon size={16}/></div>
+                    <button key={i.label} onClick={i.action} className={`w-full flex items-center gap-3 p-2.5 rounded-xl text-left hover:${isDark?"bg-white/5":"bg-slate-100"} transition`}>
+                      <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${isDark?"bg-white/10 text-white":"bg-slate-100 text-slate-900 font-bold"}`}><i.icon size={15}/></div>
                       <div><div className="text-[13px] font-semibold">{i.label}</div><div className={`text-[11px] ${textMuted}`}>{i.desc}</div></div>
                     </button>
                   ))}
@@ -1107,50 +1224,30 @@ if (userRole === "DIGITAL_MARKETING") {
               )}
             </div>
 
-            {/* Day & Night Theme Toggle Button */}
+            {/* Circular Theme Toggle Button (TailAdmin style) */}
             <button
-              onClick={toggleTheme}
-              title={isDark ? "Switch to Day (Light Mode)" : "Switch to Night (Dark Mode)"}
-              aria-label={isDark ? "Switch to Day (Light Mode)" : "Switch to Night (Dark Mode)"}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${
-                isDark 
-                  ? "bg-[#121826] border-[#1e293b] text-[#f1f5f9] hover:border-[#cca45f]/40 shadow-sm" 
-                  : "bg-white border-[#eee6da] text-[#1c1917] hover:border-[#a07432]/40 shadow-sm"
-              }`}
+              onClick={() => toggleTheme()}
+              title={isDark ? "Switch to Day Mode" : "Switch to Night Mode"}
+              className="h-10 w-10 rounded-full border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs transition"
             >
-              {isDark ? (
-                <Moon size={13} className="text-[#cca45f]" />
-              ) : (
-                <Sun size={13} className="text-amber-500" />
-              )}
-              <span className="text-[10px] font-bold tracking-widest uppercase font-mono">
-                {isDark ? "NIGHT" : "DAY"}
-              </span>
-              <div className={`w-8 h-4 rounded-full p-0.5 transition-colors flex items-center ${
-                isDark ? "bg-[#090d16] justify-end" : "bg-[#ede5d8] justify-start"
-              }`}>
-                <div className={`w-3 h-3 rounded-full shadow transition-transform ${
-                  isDark ? "bg-[#cca45f]" : "bg-[#b88a44]"
-                }`} />
-              </div>
+              {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
             </button>
 
+            {/* Circular Notification Bell with Orange Dot (TailAdmin style) */}
             <div ref={notifContainerRef} className="relative">
               <button
                 onClick={() => { setNotifOpen(!notifOpen); setNotificationTab("unread"); }}
                 title="Notifications"
                 aria-label="View notifications"
-                className={`h-10 w-10 rounded-xl border flex items-center justify-center relative ${bgCard} hover:scale-105 transition`}
+                className="h-10 w-10 rounded-full border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs relative transition"
               >
-                <Bell size={17}/>
+                <Bell size={18} />
                 {notifications.filter(n => n.unread).length > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold animate-pulse">
-                    {notifications.filter(n => n.unread).length}
-                  </span>
+                  <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#f97316] ring-2 ring-white dark:ring-slate-900" />
                 )}
               </button>
               {notifOpen && (
-                <div className={`absolute right-0 top-12 w-[360px] rounded-3xl border shadow-2xl z-40 ${bgCard} overflow-hidden`}>
+                <div className={`absolute right-0 top-12 w-[360px] rounded-2xl border shadow-2xl z-40 ${bgCard} overflow-hidden`}>
                   <div className={`p-4 border-b ${borderC}`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1220,17 +1317,48 @@ if (userRole === "DIGITAL_MARKETING") {
               )}
             </div>
 
-            <div className={`hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[11px] font-bold shadow-sm ${
-              isDark ? "border-amber-500/25 bg-amber-500/10 text-amber-300" : "border-amber-200 bg-amber-50 text-amber-800"
-            }`}>
-              <Crown size={13} className={isDark ? "text-amber-400" : "text-amber-600"} />
-              <span>Super Admin</span>
+            {/* User Profile Pill (TailAdmin style: avatar + name + chevron) */}
+            <div ref={userMenuRef} className="relative">
+              <button
+                onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                className="flex items-center gap-2.5 pl-2 py-1 pr-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800/60 transition group"
+              >
+                <div className="w-10 h-10 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-sm flex items-center justify-center overflow-hidden shrink-0 shadow-xs ring-1 ring-slate-900/10 dark:ring-white/20">
+                  {currentUser?.name ? currentUser.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase() : "SA"}
+                </div>
+                <span className="hidden sm:inline text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white transition">
+                  {currentUser?.name?.split(" ")[0] || "Admin"}
+                </span>
+                <ChevronDown size={15} className={`text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-transform duration-200 ${userDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+              {userDropdownOpen && (
+                <div className={`absolute right-0 top-12 w-56 rounded-2xl border shadow-2xl z-30 p-2 ${bgCard}`}>
+                  <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser?.name || "Super Admin"}</p>
+                    <p className="text-[11px] text-slate-400 truncate">{currentUser?.email || "root@zootechx"}</p>
+                  </div>
+                  <button
+                    onClick={() => { setCurrentPage("settings"); setUserDropdownOpen(false); }}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:${isDark ? "bg-white/5" : "bg-slate-100"} transition`}
+                  >
+                    <Settings size={14} />
+                    <span>Account Settings</span>
+                  </button>
+                  <button
+                    onClick={() => { logout(); setUserDropdownOpen(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-500 hover:bg-rose-500/10 transition"
+                  >
+                    <LogOut size={14} />
+                    <span>Sign out</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
 
         {/* CONTENT */}
-        <main className={`flex-1 min-h-0 overflow-y-auto p-4 pb-20 lg:p-6 ${bgMain} ${textMain} transition-colors duration-200`}>
+        <main className={`crm-content flex-1 min-h-0 overflow-y-auto p-4 pb-20 lg:p-6 ${bgMain} ${textMain} transition-colors duration-200`}>
           {/* DASHBOARD */}
           {currentPage==="dashboard" && (
             <DashboardPage>
@@ -1238,103 +1366,97 @@ if (userRole === "DIGITAL_MARKETING") {
               <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .35 }} className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className={`text-2xl lg:text-3xl font-bold tracking-tight ${textPrimary}`}>Executive Command</h1>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
-                      LIVE RADAR
-                    </span>
+                    <h1 className={`text-2xl lg:text-3xl font-bold tracking-tight ${textPrimary}`}>Business overview</h1>
                   </div>
-                  <p className={`mt-1 text-xs ${textMuted}`}>Real-time performance analytics, active deal pipeline, and billing metrics.</p>
+                  <p className={`mt-1 text-xs ${textMuted}`}>Current lead, follow-up, and billing activity from your CRM.</p>
                 </div>
-                <button onClick={()=> setShowAddLead(true)} className="flex h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 px-4 text-xs font-semibold text-white shadow-lg shadow-indigo-600/25 transition hover:scale-[1.02] active:scale-[0.98]"><Plus size={16}/>Add New Lead</button>
+                <button onClick={()=> setShowAddLead(true)} className="flex h-10 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-xs font-semibold text-white shadow-sm shadow-indigo-600/25 transition hover:bg-indigo-700 active:scale-[0.98]"><Plus size={16}/>Add New Lead</button>
               </motion.section>
 
-              {/* KPI Stat Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* KPI Stat Cards - TailAdmin Metric Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {[
-                  { label:"Active Pipeline Leads", value:kpis.total, change:"+12%", up:true, icon:UserPlus, color:"from-indigo-600 to-violet-600", accent:"text-indigo-400" },
-                  { label:"Total Invoiced", value:`₹${(kpis.totalInvoiced/100000).toFixed(1)}L`, change:"+8.2%", up:true, icon:CreditCard, color:"from-emerald-600 to-teal-600", accent:"text-emerald-400" },
-                  { label:"Pending Settlements", value:kpis.pending, change:"-2", up:false, icon:Clock, color:"from-amber-500 to-orange-500", accent:"text-amber-400" },
-                  { label:"Overdue Actions", value:kpis.overdue, change:"+3", up:false, icon:AlertCircle, color:"from-red-500 to-pink-500", accent:"text-rose-400" },
+                  { label:"Active Pipeline Leads", value:kpis.total, icon:UserPlus, trend:"+12%", positive:true },
+                  { label:"Total Invoiced", value:`₹${(kpis.totalInvoiced/100000).toFixed(1)}L`, icon:CreditCard, trend:"+18.4%", positive:true },
+                  { label:"Pending Settlements", value:kpis.pending, icon:Clock, trend:"-2.5%", positive:false },
+                  { label:"Overdue Actions", value:kpis.overdue, icon:AlertCircle, trend:kpis.overdue>0 ? "Needs action" : "Clear", positive:kpis.overdue===0 },
                 ].map(k=> (
-                  <motion.div whileHover={{ y:-4, scale:1.01 }} transition={{ duration:.2 }} key={k.label} className={`rounded-3xl border p-5 ${bgCard} shadow-sm relative overflow-hidden`}>
-                    <div className={`mb-3 h-[2px] w-full rounded-full bg-gradient-to-r ${k.color}`}/>
-                    <div className="flex items-end justify-between gap-3">
-                      <div>
-                        <div className={`text-[26px] font-bold leading-none ${k.accent}`}>{k.value}</div>
-                        <div className={`mt-2 text-[11px] font-semibold uppercase tracking-wider ${textMuted}`}>{k.label}</div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <div className={`flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br ${k.color} text-white shadow-md`}><k.icon size={16}/></div>
-                        <div className={`flex items-center gap-0.5 text-[11px] font-bold ${k.up?"text-emerald-400":"text-rose-400"}`}>
-                          {k.up?<TrendingUp size={12}/>:<TrendingDown size={12}/>}{k.change}
-                        </div>
+                  <div key={k.label} className="tail-card p-5 md:p-6">
+                    <div className="tail-metric-icon mb-5">
+                      <k.icon size={24} className="text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{k.label}</p>
+                    <div className="mt-3 flex items-end justify-between">
+                      <h4 className="text-2xl lg:text-3xl font-bold text-slate-800 dark:text-white">{k.value}</h4>
+                      <div className="flex items-center gap-1.5">
+                        <span className={k.positive ? "tail-badge-success" : "tail-badge-danger"}>{k.trend}</span>
                       </div>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
 
               {/* Chart Grid */}
-              <div className="grid lg:grid-cols-3 gap-4">
-                <div className={`rounded-3xl border p-5 ${bgCard} shadow-sm`}>
+              <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
+                <div className="tail-card p-5 sm:p-6">
                   <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <div className="font-bold text-sm">Pipeline Stages</div>
-                      <div className={`text-[11px] ${textMuted}`}>Lead volume per funnel tier</div>
+                      <div className="font-semibold text-sm text-slate-800 dark:text-white">Pipeline Stages</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Lead volume per funnel tier</div>
                     </div>
-                    <button onClick={()=> setCurrentPage("leads")} className="text-xs font-semibold text-indigo-400 hover:underline">View Leads</button>
+                    <button onClick={()=> setCurrentPage("leads")} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">View Leads</button>
                   </div>
                   <div className="h-[210px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={pipelineData} layout="vertical">
                         <defs>
                           <linearGradient id="barPipelineGrad" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stopColor="#6366f1" />
+                            <stop offset="0%" stopColor="#4f46e5" />
                             <stop offset="100%" stopColor="#06b6d4" />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke={isDark?"rgba(255,255,255,0.05)":"#e2e8f0"} horizontal={false}/>
-                        <XAxis type="number" stroke={isDark?"#64748b":"#94a3b8"} fontSize={11}/>
-                        <YAxis dataKey="name" type="category" width={80} stroke={isDark?"#64748b":"#94a3b8"} fontSize={11}/>
-                        <Tooltip contentStyle={{ backgroundColor: isDark ? "#121624" : "#ffffff", borderColor: isDark ? "rgba(255,255,255,0.1)" : "#e2e8f0", borderRadius: "12px", fontSize: "12px" }}/>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark?"#1e293b":"#f1f5f9"} horizontal={false}/>
+                        <XAxis type="number" stroke={isDark?"#64748b":"#94a3b8"} fontSize={11} tickLine={false}/>
+                        <YAxis dataKey="name" type="category" width={80} stroke={isDark?"#64748b":"#94a3b8"} fontSize={11} tickLine={false}/>
+                        <Tooltip contentStyle={{ backgroundColor: isDark ? "#0f172a" : "#ffffff", borderColor: isDark ? "#1e293b" : "#e2e8f0", borderRadius: "12px", fontSize: "12px" }}/>
                         <Bar dataKey="value" fill="url(#barPipelineGrad)" radius={[0,8,8,0]}/>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                <div className={`rounded-3xl border p-5 ${bgCard} shadow-sm`}>
-                  <div className="font-bold text-sm mb-1">Monthly Invoicing Run-rate</div>
-                  <div className={`text-[11px] mb-4 ${textMuted}`}>Revenue billed over trailing months</div>
+                <div className="tail-card p-5 sm:p-6">
+                  <div className="font-semibold text-sm text-slate-800 dark:text-white mb-0.5">Monthly Invoicing Run-rate</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mb-4">Revenue billed over trailing months</div>
                   <div className="h-[210px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={revenueData}>
                         <defs>
                           <linearGradient id="revenueAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.6}/>
-                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0}/>
+                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0.0}/>
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke={isDark?"rgba(255,255,255,0.05)":"#e2e8f0"}/>
-                        <XAxis dataKey="month" stroke={isDark?"#64748b":"#94a3b8"} fontSize={11}/>
-                        <YAxis stroke={isDark?"#64748b":"#94a3b8"} fontSize={11}/>
-                        <Tooltip contentStyle={{ backgroundColor: isDark ? "#121624" : "#ffffff", borderColor: isDark ? "rgba(255,255,255,0.1)" : "#e2e8f0", borderRadius: "12px", fontSize: "12px" }}/>
-                        <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2.5} fill="url(#revenueAreaGrad)" />
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark?"#1e293b":"#f1f5f9"}/>
+                        <XAxis dataKey="month" stroke={isDark?"#64748b":"#94a3b8"} fontSize={11} tickLine={false}/>
+                        <YAxis stroke={isDark?"#64748b":"#94a3b8"} fontSize={11} tickLine={false}/>
+                        <Tooltip contentStyle={{ backgroundColor: isDark ? "#0f172a" : "#ffffff", borderColor: isDark ? "#1e293b" : "#e2e8f0", borderRadius: "12px", fontSize: "12px" }}/>
+                        <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={2.5} fill="url(#revenueAreaGrad)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                <div className={`rounded-3xl border p-5 ${bgCard} shadow-sm`}>
-                  <div className="font-bold text-sm mb-1">Settlement Health</div>
-                  <div className={`text-[11px] mb-4 ${textMuted}`}>Paid vs Pending vs Overdue</div>
+                <div className="tail-card p-5 sm:p-6">
+                  <div className="font-semibold text-sm text-slate-800 dark:text-white mb-0.5">Settlement Health</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mb-4">Paid vs Pending vs Overdue</div>
                   <div className="h-[210px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie data={statusData} dataKey="value" innerRadius={50} outerRadius={78} paddingAngle={4}>
                           {statusData.map((entry,index)=><Cell key={index} fill={entry.color}/>)}
                         </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: isDark ? "#121624" : "#ffffff", borderColor: isDark ? "rgba(255,255,255,0.1)" : "#e2e8f0", borderRadius: "12px", fontSize: "12px" }}/>
+                        <Tooltip contentStyle={{ backgroundColor: isDark ? "#0f172a" : "#ffffff", borderColor: isDark ? "#1e293b" : "#e2e8f0", borderRadius: "12px", fontSize: "12px" }}/>
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -1342,47 +1464,47 @@ if (userRole === "DIGITAL_MARKETING") {
               </div>
 
               {/* Lower Section */}
-              <div className="grid lg:grid-cols-2 gap-4">
-                <div className={`rounded-3xl border ${bgCard} shadow-sm overflow-hidden`}>
-                  <div className={`p-4 flex items-center justify-between border-b ${borderC}`}>
+              <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
+                <div className="tail-card overflow-hidden">
+                  <div className="p-4 sm:p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
                     <div>
-                      <div className="font-bold text-sm">Follow-ups Today ({todayFollowUps.length})</div>
-                      <div className={`text-[11px] ${textMuted}`}>Immediate high-priority touchpoints</div>
+                      <div className="font-semibold text-sm text-slate-800 dark:text-white">Follow-ups Today ({todayFollowUps.length})</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Immediate high-priority touchpoints</div>
                     </div>
-                    <button onClick={()=> setCurrentPage("followups")} className="text-xs font-semibold text-indigo-400 hover:underline">View All</button>
+                    <button onClick={()=> setCurrentPage("followups")} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">View All</button>
                   </div>
-                  <div className="divide-y divide-inherit">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
                     {todayFollowUps.slice(0,4).map(f=> (
-                      <div key={f.id} className={`p-4 flex items-center gap-3 hover:${bgMuted} transition`}>
-                        <div className={`h-9 w-9 rounded-2xl flex items-center justify-center ${isDark?"bg-white/5 text-indigo-400":"bg-slate-100 text-indigo-600"}`}><Phone size={14}/></div>
+                      <div key={f.id} className="p-4 flex items-center gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                        <div className="tail-metric-icon !h-9 !w-9 !rounded-xl text-indigo-600 dark:text-indigo-400"><Phone size={14}/></div>
                         <div className="flex-1 min-w-0">
-                          <div className={`text-xs font-bold ${textPrimary} truncate`}>{f.leadName} • {f.type}</div>
-                          <div className={`text-[11px] ${textMuted} truncate`}>{f.time} • {f.property}</div>
+                          <div className="text-xs font-semibold text-slate-800 dark:text-white truncate">{f.leadName} • {f.type}</div>
+                          <div className="text-[11px] text-slate-400 truncate mt-0.5">{f.time} • {f.property}</div>
                         </div>
-                        <button onClick={()=> void handleCompleteFollowUp(f)} className="h-8 px-3 rounded-xl bg-emerald-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow hover:bg-emerald-500 transition"><Check size={12}/>Done</button>
+                        <button onClick={()=> void handleCompleteFollowUp(f)} className="tail-btn-primary !py-1.5 !px-3 !text-[11px]"><Check size={12}/>Done</button>
                       </div>
                     ))}
-                    {todayFollowUps.length===0 && <div className={`p-10 text-center text-xs ${textMuted}`}>All caught up! No pending follow-ups for today 🎉</div>}
+                    {todayFollowUps.length===0 && <div className="p-10 text-center text-xs text-slate-400">All caught up! No pending follow-ups for today 🎉</div>}
                   </div>
                 </div>
 
-                <div className={`rounded-3xl border ${bgCard} shadow-sm overflow-hidden`}>
-                  <div className={`p-4 border-b ${borderC} flex items-center justify-between`}>
+                <div className="tail-card overflow-hidden">
+                  <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <div>
-                      <div className="font-bold text-sm">Recent Inbound Leads</div>
-                      <div className={`text-[11px] ${textMuted}`}>Newest opportunities added to CRM</div>
+                      <div className="font-semibold text-sm text-slate-800 dark:text-white">Recent Inbound Leads</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Newest opportunities added to CRM</div>
                     </div>
-                    <button onClick={()=> setCurrentPage("leads")} className="text-xs font-semibold text-indigo-400 hover:underline">View All Leads</button>
+                    <button onClick={()=> setCurrentPage("leads")} className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">View All Leads</button>
                   </div>
-                  <div className="divide-y divide-inherit">
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
                     {leads.slice(0,4).map(l=> (
-                      <div key={l.id} className={`p-4 flex items-center gap-3 hover:${bgMuted} transition`}>
-                        <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center text-xs font-bold shadow-sm">{l.avatar}</div>
+                      <div key={l.id} className="p-4 flex items-center gap-3 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                        <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center text-xs font-bold shrink-0">{l.avatar}</div>
                         <div className="flex-1 min-w-0">
-                          <div className={`text-xs font-bold ${textPrimary} truncate`}>{l.name}</div>
-                          <div className={`text-[11px] ${textMuted} truncate`}>{l.company || "Individual Client"} • {l.location}</div>
+                          <div className="text-xs font-semibold text-slate-800 dark:text-white truncate">{l.name}</div>
+                          <div className="text-[11px] text-slate-400 truncate mt-0.5">{l.company || "Individual Client"} • {l.location}</div>
                         </div>
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${l.status==="New"?"bg-blue-500/10 text-blue-400 border-blue-500/20": l.status==="Follow-up"?"bg-amber-500/10 text-amber-400 border-amber-500/20":"bg-slate-500/10 text-slate-400 border-slate-500/20"}`}>{l.status}</span>
+                        <span className={l.status==="New" ? "tail-badge-info" : l.status==="Follow-up" ? "tail-badge-warning" : "tail-badge-success"}>{l.status}</span>
                       </div>
                     ))}
                   </div>
@@ -1398,16 +1520,16 @@ if (userRole === "DIGITAL_MARKETING") {
             <div className="max-w-[1600px] mx-auto space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
-                  <h1 className={`text-2xl font-bold tracking-tight ${textPrimary}`}>Leads Intelligence</h1>
-                  <p className={`text-xs mt-1 ${textMuted}`}>Manage qualified prospects, lead stages, and direct touchpoints.</p>
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Leads Intelligence</h1>
+                  <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">Manage qualified prospects, lead stages, and direct touchpoints.</p>
                 </div>
                 <div className="flex items-center gap-3">
                   {/* View Mode Toggle */}
-                  <div className={`flex items-center gap-1 p-1 rounded-xl border ${borderC} ${bgMuted}`}>
+                  <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
                     <button
                       onClick={() => setLeadViewMode("cards")}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                        leadViewMode === "cards" ? "bg-indigo-600 text-white shadow" : `${textMuted} hover:${textPrimary}`
+                        leadViewMode === "cards" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
                       }`}
                     >
                       Cards
@@ -1415,29 +1537,32 @@ if (userRole === "DIGITAL_MARKETING") {
                     <button
                       onClick={() => setLeadViewMode("table")}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                        leadViewMode === "table" ? "bg-indigo-600 text-white shadow" : `${textMuted} hover:${textPrimary}`
+                        leadViewMode === "table" ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs" : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
                       }`}
                     >
                       Table
                     </button>
                   </div>
 
-                  <button onClick={() => exportCsv("zootechx-leads.csv", visibleLeads.map((lead) => ({ Name: lead.name, Company: lead.company, Email: lead.email, Phone: lead.phone, Status: lead.status, Source: lead.source })))} className={`h-10 px-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2 ${bgCard} hover:${bgMuted} transition`}><Download size={14}/>Export</button>
-                  <button onClick={()=> setShowAddLead(true)} className="h-10 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 text-white text-xs font-semibold shadow flex items-center gap-2 hover:opacity-95 transition"><Plus size={16}/>Add Lead</button>
+                  <button onClick={() => exportCsv("zootechx-leads.csv", visibleLeads.map((lead) => ({ Name: lead.name, Company: lead.company, Email: lead.email, Phone: lead.phone, Status: lead.status, Source: lead.source })))} className="tail-btn-secondary"><Download size={14}/>Export</button>
+                  <button onClick={()=> setShowAddLead(true)} className="tail-btn-primary"><Plus size={16}/>Add Lead</button>
                 </div>
               </div>
 
               {/* Stats Bar */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {[
-                  { label:"Total Prospects", value:activeLeads.length, color: textPrimary },
-                  { label:"New Inbound", value:leads.filter(l=> l.status==="New").length, color: isDark ? "text-cyan-400" : "text-cyan-600" },
-                  { label:"Follow-ups Today", value:todayFollowUps.length, color: isDark ? "text-amber-400" : "text-amber-600" },
-                  { label:"Converted Clients", value:leads.filter(l=> l.status==="Converted").length, color: isDark ? "text-emerald-400" : "text-emerald-600" },
+                  { label:"Total Prospects", value:activeLeads.length, icon:UserPlus, color:"text-indigo-600 dark:text-indigo-400" },
+                  { label:"New Inbound", value:leads.filter(l=> l.status==="New").length, icon:Sparkles, color:"text-blue-600 dark:text-blue-400" },
+                  { label:"Follow-ups Today", value:todayFollowUps.length, icon:BellRing, color:"text-amber-600 dark:text-amber-400" },
+                  { label:"Converted Clients", value:leads.filter(l=> l.status==="Converted").length, icon:ShieldCheck, color:"text-emerald-600 dark:text-emerald-400" },
                 ].map(c=> (
-                  <div key={c.label} className={`rounded-3xl border p-4 lg:p-5 ${bgCard} shadow-sm`}>
-                    <div className={`text-[11px] font-bold uppercase tracking-wider ${textMuted}`}>{c.label}</div>
-                    <div className={`text-2xl lg:text-3xl font-bold mt-1.5 ${c.color}`}>{c.value}</div>
+                  <div key={c.label} className="tail-card p-5 md:p-6">
+                    <div className="tail-metric-icon mb-4">
+                      <c.icon size={22} className={c.color} />
+                    </div>
+                    <div className="text-xs font-medium text-slate-500 dark:text-slate-400">{c.label}</div>
+                    <div className="text-2xl lg:text-3xl font-bold mt-1.5 text-slate-800 dark:text-white">{c.value}</div>
                   </div>
                 ))}
               </div>
@@ -1628,7 +1753,7 @@ if (userRole === "DIGITAL_MARKETING") {
             <div className="max-w-[1600px] mx-auto space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div><h1 className={`text-[22px] font-bold ${textPrimary}`}>Follow-ups</h1><p className={`text-[13px] ${textMuted}`}>Stay on top of conversations</p></div>
-                <button onClick={()=> setShowFollowUpModal(true)} className="h-9 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-[13px] font-medium flex items-center gap-2"><Plus size={16}/>Schedule Follow-up</button>
+                <button onClick={()=> setShowFollowUpModal(true)} className="h-9 px-4 rounded-xl btn-dark-gradient text-white text-[13px] font-medium flex items-center gap-2"><Plus size={16}/>Schedule Follow-up</button>
               </div>
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -1718,7 +1843,7 @@ if (userRole === "DIGITAL_MARKETING") {
                 </div>
                 <div className="flex items-center gap-2.5">
                   <button onClick={() => exportCsv("zootechx-invoices.csv", invoices.map((invoice) => ({ Invoice: invoice.number, Client: invoice.clientName, Date: invoice.date, Total: invoice.total, Status: invoice.status })))} className={`h-10 px-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2 ${bgCard} hover:${bgMuted} transition`}><Download size={14}/>Export</button>
-                  <button onClick={()=> setCurrentPage("invoices/new")} className="h-10 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 text-white text-xs font-semibold flex items-center gap-2 shadow hover:opacity-95 transition"><Plus size={16}/>Create Invoice</button>
+                  <button onClick={()=> setCurrentPage("invoices/new")} className="h-10 px-4 rounded-xl btn-dark-gradient text-white text-xs font-semibold flex items-center gap-2 shadow hover:opacity-95 transition"><Plus size={16}/>Create Invoice</button>
                 </div>
               </div>
 
@@ -1726,7 +1851,7 @@ if (userRole === "DIGITAL_MARKETING") {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { label:"Total Invoiced", value: `₹${(invoices.reduce((s,i)=> s + (Number(i.total)||0), 0)).toLocaleString()}`, color: textPrimary },
-                  { label:"Paid Settlements", value: `₹${(invoices.reduce((s,i)=> s + (i.status === "Paid" ? Number(i.total) : (Number(i.amountPaid)||0)), 0)).toLocaleString()}`, color: isDark ? "text-[#cca45f]" : "text-[#a07432]" },
+                  { label:"Paid Settlements", value: `₹${(invoices.reduce((s,i)=> s + (i.status === "Paid" ? Number(i.total) : (Number(i.amountPaid)||0)), 0)).toLocaleString()}`, color: isDark ? "text-emerald-400" : "text-emerald-600 font-bold" },
                   { label:"Pending Collection", value: `₹${Math.max(0, invoices.reduce((s,i)=> s + (i.status === "Paid" ? 0 : (Number(i.total) - (Number(i.amountPaid)||0))), 0)).toLocaleString()}`, color: isDark ? "text-amber-400" : "text-amber-600" },
                   { label:"Overdue Invoices", value: invoices.filter(i=> i.status === "Overdue").length, color: isDark ? "text-rose-400" : "text-rose-600" },
                 ].map(stat => (
@@ -1754,8 +1879,8 @@ if (userRole === "DIGITAL_MARKETING") {
                     </thead>
                     <tbody className={`divide-y ${borderC}`}>
                       {invoices.map(inv=> (
-                        <tr key={inv.id} className={`hover:${isDark ? "bg-[#171f30]/60" : "bg-[#f6f1e7]"} transition`}>
-                          <td className={`p-3.5 font-bold mono ${isDark ? "text-[#cca45f]" : "text-[#a07432]"}`}>{inv.number}</td>
+                        <tr key={inv.id} className={`hover:${isDark ? "bg-white/5" : "bg-zinc-50"} transition`}>
+                          <td className={`p-3.5 font-bold mono ${isDark ? "text-white" : "text-black"}`}>{inv.number}</td>
                           <td className={`p-3.5 font-medium ${textPrimary}`}>
                             {inv.clientName && inv.clientName !== "Client"
                               ? inv.clientName
@@ -1770,13 +1895,13 @@ if (userRole === "DIGITAL_MARKETING") {
                           <td className="p-3.5">
                             <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
                               inv.status==="Paid"
-                                ? (isDark ? "bg-[#cca45f]/15 text-[#cca45f] border-[#cca45f]/30" : "bg-[#f5eddf] text-[#966c2d] border-[#e8dfd1]") :
+                                ? (isDark ? "bg-white/10 text-white border-white/20" : "bg-black text-white border-black") :
                               inv.status==="Sent"?"bg-cyan-500/10 text-cyan-400 border-cyan-500/20":
                               inv.status==="Overdue"?"bg-rose-500/10 text-rose-400 border-rose-500/20":
                               "bg-amber-500/10 text-amber-400 border-amber-500/20"
                             }`}>
                               <span className={`h-1.5 w-1.5 rounded-full ${
-                                inv.status==="Paid" ? (isDark ? "bg-[#cca45f]" : "bg-[#b88a44]") :
+                                inv.status==="Paid" ? (isDark ? "bg-white" : "bg-white") :
                                 inv.status==="Sent"?"bg-cyan-400":
                                 inv.status==="Overdue"?"bg-rose-400":
                                 "bg-amber-400"
@@ -1823,14 +1948,14 @@ if (userRole === "DIGITAL_MARKETING") {
                 <div className="flex items-center gap-2">
                   <button onClick={()=> handleSaveInvoice(true)} className={`h-10 px-4 rounded-xl border text-[13px] font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm ${bgCard}`}><Save size={14} className="inline mr-1.5"/>Save draft</button>
                   <button onClick={()=> setPreviewMode(!previewMode)} className={`h-10 px-4 rounded-xl border text-[13px] font-medium transition-all hover:-translate-y-0.5 hover:shadow-sm ${bgCard}`}><Eye size={14} className="inline mr-1.5"/>{previewMode?"Edit invoice":"Preview"}</button>
-                  <button onClick={()=> handleSaveInvoice(false)} className="h-10 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-[13px] font-medium flex items-center gap-2 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-indigo-500/20"><Save size={14}/>Save & send</button>
+                  <button onClick={()=> handleSaveInvoice(false)} className="h-10 px-4 rounded-xl btn-dark-gradient text-white text-[13px] font-medium flex items-center gap-2 transition-all hover:-translate-y-0.5 hover:shadow-lg"><Save size={14}/>Save & send</button>
                 </div>
               </div>
 
               {previewMode ? (
                 <motion.div initial={{ opacity: 0, scale: 0.985 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.24 }} className={`rounded-2xl border p-6 lg:p-8 max-w-[800px] mx-auto ${isDark?"bg-white text-black":"bg-white text-black"} shadow-xl`}>
                   <div className="flex justify-between items-start">
-                    <div className="flex gap-3"><div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center font-bold">Z</div><div><div className="font-bold">ZootechX.ai</div><div className="text-[11px] text-slate-500">AI-powered systems studio • GSTIN: 27ABCDE1234F1Z5</div><div className="text-[11px] text-slate-500">Mumbai, Maharashtra • zootechx.ai</div></div></div>
+                    <div className="flex items-center gap-3"><ZootechXLogo variant="full" size="md" /><div><div className="text-[11px] text-zinc-500">AI-powered systems studio • GSTIN: 27ABCDE1234F1Z5</div><div className="text-[11px] text-zinc-500">Mumbai, Maharashtra • zootechx.ai</div></div></div>
                     <div className="text-right"><div className="text-[20px] font-bold">TAX INVOICE</div><div className="mono text-[12px] mt-1">{newInvoice.number}</div></div>
                   </div>
                   <div className="grid grid-cols-2 gap-6 mt-6 text-[12px]">
@@ -1936,7 +2061,7 @@ if (userRole === "DIGITAL_MARKETING") {
           {currentPage==="quotations" && (
             <QuotationsPage>
             <div className="max-w-[1600px] mx-auto space-y-4">
-              <div className="flex items-center justify-between"><div><h1 className={`text-[22px] font-bold ${textPrimary}`}>Quotations</h1><p className={`text-[13px] ${textMuted}`}>Manage quotes</p></div><button onClick={()=> setShowCreateQuote(true)} className="h-9 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-[13px] font-medium flex items-center gap-2"><Plus size={16}/>Create Quotation</button></div>
+              <div className="flex items-center justify-between"><div><h1 className={`text-[22px] font-bold ${textPrimary}`}>Quotations</h1><p className={`text-[13px] ${textMuted}`}>Manage quotes</p></div><button onClick={()=> setShowCreateQuote(true)} className="h-9 px-4 rounded-xl btn-dark-gradient text-white text-[13px] font-medium flex items-center gap-2"><Plus size={16}/>Create Quotation</button></div>
               <div className={`rounded-2xl border overflow-hidden ${bgCard}`}><table className="w-full"><thead className={`${isDark?"bg-[#0f0f1a]":"bg-slate-50"} border-b ${borderC} text-[11px] ${textMuted} uppercase tracking-widest`}><tr><th className="text-left p-3">Quote ID</th><th className="text-left p-3">Client</th><th className="text-left p-3">Amount</th><th className="text-left p-3">Valid Until</th><th className="text-left p-3">Status</th><th className="text-left p-3">Actions</th></tr></thead><tbody className={`divide-y ${borderC}`}>{quotations.map(q=> <tr key={q.id}><td className="p-3 mono text-[13px]">{q.id}</td><td className="p-3 text-[13px]">{q.clientName}</td><td className="p-3 font-semibold">₹{q.amount.toLocaleString()}</td><td className="p-3 text-[12px]">{q.validUntil}</td><td className="p-3"><span className={`text-[11px] px-2 py-1 rounded-full border ${q.status==="Sent"?"bg-blue-500/10 text-blue-600":"bg-slate-500/10 text-slate-600"}`}>{q.status}</span></td><td className="p-3 flex gap-1"><button onClick={async ()=> {
   try {
     const res = await apiFetch(`/api/quotations/${q.id}/convert-to-invoice`, { method: "POST" });
@@ -1975,13 +2100,14 @@ if (userRole === "DIGITAL_MARKETING") {
           {currentPage==="clients" && (
             <ClientsPage>
             <div className="max-w-[1600px] mx-auto space-y-4">
-              <div className="flex items-center justify-between"><div><h1 className={`text-[22px] font-bold ${textPrimary}`}>Clients</h1><p className={`text-[13px] ${textMuted}`}>Manage your clients</p></div><button onClick={()=> setShowCreateClient(true)} className="h-9 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-[13px] font-medium flex items-center gap-2"><Plus size={16}/>Add Client</button></div>
+              <div className="flex items-center justify-between"><div><h1 className={`text-[22px] font-bold ${textPrimary}`}>Clients</h1><p className={`text-[13px] ${textMuted}`}>Manage your clients</p></div><button onClick={()=> setShowCreateClient(true)} className="h-9 px-4 rounded-xl btn-dark-gradient text-white text-[13px] font-medium flex items-center gap-2"><Plus size={16}/>Add Client</button></div>
               <div className={`rounded-2xl border overflow-hidden ${bgCard}`}><div className="overflow-x-auto"><table className="w-full min-w-[700px]"><thead className={`${isDark?"bg-[#0f0f1a]":"bg-slate-50"} border-b ${borderC} text-[11px] ${textMuted} uppercase tracking-widest`}><tr><th className="text-left p-3">Business</th><th className="text-left p-3">Contact</th><th className="text-left p-3">GSTIN</th><th className="text-left p-3">State</th><th className="text-left p-3">Projects</th></tr></thead><tbody className={`divide-y ${borderC}`}>{clients.map(c=> <tr key={c.id}><td className="p-3"><div className="font-medium text-[13px]">{c.businessName}</div><div className={`text-[11px] ${textMuted}`}>{c.name}</div></td><td className="p-3 text-[12px]"><div>{c.email}</div><div className={textMuted}>{c.phone}</div></td><td className="p-3 mono text-[11px]">{c.gstin||"—"}</td><td className="p-3 text-[12px]">{c.state}</td><td className="p-3 text-[12px]">{c.projects && c.projects.length > 0 ? <div className="flex flex-wrap gap-1.5">{c.projects.map(p => <span key={p.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">{p.title || p.name} <span className="font-bold opacity-80">({p.status})</span></span>)}</div> : <span className={`text-[11px] ${textMuted}`}>No active projects</span>}</td></tr>)}</tbody></table></div></div>
             </div>
             </ClientsPage>
           )}
 
           {currentPage==="developers" && <DeveloperWorkspace admin embedded dark={isDark} />}
+          {currentPage==="marketing" && <DigitalMarketingWorkspace admin embedded dark={isDark} />}
 
           {currentPage === "payments" && <PaymentsPage><PaymentsWorkspace dark={isDark} role={userRole}/></PaymentsPage>}
 
@@ -2036,7 +2162,7 @@ if (userRole === "DIGITAL_MARKETING") {
       </AnimatePresence>
 
       {/* MOBILE SIDEBAR BOTTOM */}
-      <div className={`lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t flex justify-around py-2 ${isDark?"bg-[#0f0f1a] border-[#23233a]":"bg-white border-slate-200"}`}>
+      <div className={`crm-mobile-nav lg:hidden fixed bottom-0 left-0 right-0 z-30 border-t flex justify-around py-2 ${isDark?"bg-[#0f0f1a] border-[#23233a]":"bg-white border-slate-200"}`}>
         {[
           { id:"dashboard", icon:LayoutDashboard },
           { id:"leads", icon:UserPlus },
@@ -2081,7 +2207,7 @@ if (userRole === "DIGITAL_MARKETING") {
                   </select>
                 </div>
               </div>
-              <button onClick={handleAddLead} className="w-full h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-medium text-[13px]">Save Lead + Create Follow-up</button>
+              <button onClick={handleAddLead} className="w-full h-10 rounded-xl btn-dark-gradient text-white font-medium text-[13px]">Save Lead + Create Follow-up</button>
             </div>
           </div>
         </div>
@@ -2100,7 +2226,7 @@ if (userRole === "DIGITAL_MARKETING") {
               <div><label className="text-[11px] font-medium">Assigned To</label><select value={followUpForm.assignedTo} onChange={e=> setFollowUpForm({...followUpForm, assignedTo:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}><option>Aarav</option><option>Priya</option><option>Rohan</option></select></div>
               <div><label className="text-[11px] font-medium">Notes</label><textarea value={followUpForm.notes||""} onChange={e=> setFollowUpForm({...followUpForm, notes:e.target.value})} className={`mt-1 w-full h-20 rounded-xl border p-3 text-[13px] ${inputCls}`}/></div>
               <div className={`p-2.5 rounded-xl border text-[11px] ${isDark?"bg-[#1c1c2e]":"bg-slate-50"} ${borderC}`}>Reminder: 15 min before • Auto notification</div>
-              <button onClick={handleScheduleFollowUp} className="w-full h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-medium text-[13px]">Schedule Follow-up</button>
+              <button onClick={handleScheduleFollowUp} className="w-full h-10 rounded-xl btn-dark-gradient text-white font-medium text-[13px]">Schedule Follow-up</button>
             </div>
           </div>
         </div>
@@ -2211,7 +2337,7 @@ if (userRole === "DIGITAL_MARKETING") {
                 type="button"
                 onClick={handleCreateClient}
                 disabled={clientSubmitting}
-                className="w-full h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-medium text-[13px] hover:opacity-95 transition disabled:opacity-50"
+                className="w-full h-10 rounded-xl btn-dark-gradient text-white font-medium text-[13px] hover:opacity-95 transition disabled:opacity-50"
               >
                 {clientSubmitting ? "Saving Client..." : "Save Client"}
               </button>
@@ -2230,7 +2356,7 @@ if (userRole === "DIGITAL_MARKETING") {
               <div><label className="text-[11px] font-medium">Customer</label><select value={quoteForm.clientName||""} onChange={e=> setQuoteForm({...quoteForm, clientName:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}><option value="">Select client</option>{clients.map(c=> <option key={c.id} value={c.businessName}>{c.businessName}</option>)}</select></div>
               <div><label className="text-[11px] font-medium">Amount</label><input type="number" value={quoteForm.amount||""} onChange={e=> setQuoteForm({...quoteForm, amount:Number(e.target.value)})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}/></div>
               <div className="grid grid-cols-2 gap-3"><div><label className="text-[11px] font-medium">Valid Until</label><input ref={quoteValidUntilRef} type="date" value={quoteForm.validUntil||""} onChange={e=> setQuoteForm({...quoteForm, validUntil:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}/></div><div><label className="text-[11px] font-medium">Status</label><select value={quoteForm.status} onChange={e=> setQuoteForm({...quoteForm, status:e.target.value})} className={`mt-1 w-full h-9 rounded-xl border px-3 text-[13px] ${inputCls}`}><option>Draft</option><option>Sent</option><option>Accepted</option></select></div></div>
-              <button onClick={()=> void handleCreateQuotation()} className="w-full h-10 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-medium text-[13px]">Save Quotation</button>
+              <button onClick={()=> void handleCreateQuotation()} className="w-full h-10 rounded-xl btn-dark-gradient text-white font-medium text-[13px]">Save Quotation</button>
             </div>
           </div>
         </div>
@@ -2263,7 +2389,7 @@ if (userRole === "DIGITAL_MARKETING") {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={()=> setPreviewInvoice(null)}/>
           <div className={`relative w-full max-w-[800px] rounded-2xl border shadow-2xl max-h-[90vh] overflow-auto bg-white text-black p-6`}>
-            <div className="flex justify-between items-start"><div className="flex gap-3"><div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white flex items-center justify-center font-bold">Z</div><div><div className="font-bold">ZootechX.ai</div><div className="text-[11px] text-slate-500">GSTIN: 27ABCDE1234F1Z5 • Mumbai</div></div></div><button onClick={()=> setPreviewInvoice(null)} className="h-8 w-8 rounded-xl border flex items-center justify-center bg-white"><X size={16}/></button></div>
+            <div className="flex justify-between items-start"><div className="flex items-center gap-3"><ZootechXLogo variant="full" size="md" /><div><div className="text-[11px] text-zinc-500">GSTIN: 27ABCDE1234F1Z5 • Mumbai</div></div></div><button onClick={()=> setPreviewInvoice(null)} className="h-8 w-8 rounded-xl border flex items-center justify-center bg-white"><X size={16}/></button></div>
             <div className="mt-6 grid grid-cols-2 gap-6 text-[12px]"><div><div className="font-semibold">Bill To</div><div className="font-medium mt-1">{previewInvoice.clientName}</div><div className="text-slate-500">Place: {previewInvoice.placeOfSupply}</div></div><div className="text-right"><div>Invoice: {previewInvoice.number}</div><div>Date: {previewInvoice.date}</div><div>Due: {previewInvoice.dueDate}</div></div></div>
             <table className="w-full mt-6 text-[12px] border"><thead className="bg-slate-100"><tr><th className="p-2 text-left">Item</th><th className="p-2 text-center">Qty</th><th className="p-2 text-right">Rate</th><th className="p-2 text-right">Amount</th></tr></thead><tbody>{previewInvoice.items.map(it=> <tr key={it.id} className="border-t"><td className="p-2">{it.name}</td><td className="p-2 text-center">{it.qty}</td><td className="p-2 text-right">₹{it.rate}</td><td className="p-2 text-right">₹{it.qty*it.rate}</td></tr>)}</tbody></table>
             <div className="flex justify-end mt-4"><div className="w-[200px] text-[12px] space-y-1"><div className="flex justify-between"><span>Subtotal</span><span>₹{previewInvoice.subtotal}</span></div><div className="flex justify-between"><span>GST</span><span>₹{previewInvoice.gstTotal}</span></div><div className="flex justify-between font-bold border-t pt-1"><span>Total</span><span>₹{previewInvoice.total}</span></div></div></div>
@@ -2274,6 +2400,6 @@ if (userRole === "DIGITAL_MARKETING") {
       {/* Click outside handlers */}
       {newDropdownOpen && <div className="fixed inset-0 z-10" onClick={()=> setNewDropdownOpen(false)}/>}
       {notifOpen && <div className="fixed inset-0 z-10" onClick={()=> setNotifOpen(false)}/>}
-    </motion.div>
+    </div>
   );
 }

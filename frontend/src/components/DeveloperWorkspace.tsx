@@ -4,11 +4,13 @@ import {
   Code2, FolderKanban, Users, Plus, KeyRound, RefreshCw,
   Send, Trash2, CalendarDays, ExternalLink, ShieldCheck, CheckCircle2,
   Clock, AlertCircle, ChevronRight, X, ArrowLeft, ArrowUpRight, LogOut, Sun, Moon, FileText,
-  LayoutDashboard, TrendingUp, Zap, Bug
+  LayoutDashboard, TrendingUp, Zap, Bug, Search,
+  Menu, ChevronDown, Bell, Settings
 } from "lucide-react";
 import { apiFetch } from "../lib/api";
 import CredentialsVault from "./CredentialsVault";
 import ScopeOfWorkWorkspace from "./ScopeOfWorkWorkspace";
+import ZootechXLogo from "./ZootechXLogo";
 
 type Developer = {
   id: string;
@@ -136,6 +138,45 @@ export default function DeveloperWorkspace({
   const [saving, setSaving] = useState<"" | "developer" | "project" | "update">("");
   const [removingDeveloper, setRemovingDeveloper] = useState(false);
   const [showCreateDevModal, setShowCreateDevModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const notifContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+      if (notifContainerRef.current && !notifContainerRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const searchMatches = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return { projects: [], developers: [], issues: [] };
+    return {
+      projects: projects.filter(p => (p.name || "").toLowerCase().includes(q) || (p.client_name || "").toLowerCase().includes(q)).slice(0, 4),
+      developers: developers.filter(d => (d.name || "").toLowerCase().includes(q) || (d.email || "").toLowerCase().includes(q)).slice(0, 4),
+      issues: issuesList.filter(i => (i.title || "").toLowerCase().includes(q) || (i.project_name || "").toLowerCase().includes(q)).slice(0, 4),
+    };
+  }, [searchQuery, projects, developers, issuesList]);
+
+  const pendingAlerts = useMemo(() => {
+    return issuesList.filter(i => i.status !== "RESOLVED");
+  }, [issuesList]);
   const [dark, setDark] = useState<boolean>(() => {
     if (propDark !== undefined) return propDark;
     if (typeof window !== "undefined") {
@@ -462,7 +503,11 @@ export default function DeveloperWorkspace({
   const visibleProjects = projects.filter(
     (project) =>
       (!activeDeveloperId || project.assigned_developer_id === activeDeveloperId) &&
-      (projectStatusFilter === "ALL" || project.status === projectStatusFilter)
+      (projectStatusFilter === "ALL" || project.status === projectStatusFilter) &&
+      (!searchQuery.trim() ||
+        project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (project.client_name && project.client_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (project.developer_name && project.developer_name.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   const activeProjects = projects.filter((p) => p.status === "IN_PROGRESS").length;
@@ -476,12 +521,12 @@ export default function DeveloperWorkspace({
       )
     : 0;
 
-  // Colors (Nocturne & Ivory Luxury Palette)
-  const bgMain = dark ? "bg-[#0c1017] text-[#f1f5f9]" : "bg-[#fbf8f2] text-[#1c1917]";
-  const bgSidebar = dark ? "bg-[#0f1420] border-[#1b2438]" : "bg-[#f8f4ec] border-[#ede5d8]";
-  const bgCard = dark ? "bg-[#121826] border-[#1e293b] text-[#f1f5f9]" : "bg-white border-[#eee6da] text-[#1c1917] shadow-[0_4px_20px_-2px_rgba(180,155,120,0.08)]";
-  const inputBg = dark ? "bg-[#171f30] border-[#222d42] text-[#f1f5f9] placeholder-[#5a687d]" : "bg-[#fcfaf7] border-[#e5dcd0] text-[#1c1917] placeholder-[#a8a199]";
-  const mutedText = dark ? "text-[#8e9bb0]" : "text-[#78716c]";
+  // Professional SaaS Theme Palette matching screenshot
+  const bgMain = dark ? "bg-[#090d16] text-slate-100" : "bg-[#f8fafc] text-slate-900";
+  const bgSidebar = dark ? "bg-[#0c1017] border-slate-800 text-slate-300" : "bg-white border-slate-200/90 text-slate-700";
+  const bgCard = dark ? "bg-[#0f172a] border-slate-800 text-slate-100 shadow-sm" : "bg-white border-slate-200/80 text-slate-900 shadow-sm";
+  const inputBg = dark ? "bg-[#090d16] border-slate-800 text-slate-100 placeholder-slate-500 focus:border-slate-600" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-slate-400";
+  const mutedText = dark ? "text-slate-400" : "text-slate-500";
 
   type NavItem = {
     id: "dashboard" | "projects" | "daily" | "issues" | "team" | "assign" | "vault" | "sows";
@@ -587,82 +632,64 @@ export default function DeveloperWorkspace({
             </div>
           </div>
 
-          {/* 4 KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 4 TailAdmin KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             {/* Metric 1: Active In Progress */}
-            <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Active Deliveries</span>
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                  <FolderKanban size={18} />
-                </div>
+            <div className="tail-card p-5 md:p-6">
+              <div className="tail-metric-icon mb-5">
+                <FolderKanban size={24} className="text-cyan-600 dark:text-cyan-400" />
               </div>
-              <div className="mt-3">
-                <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
-                  {activeProjects}
-                </div>
-                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-cyan-400 font-medium">
-                  <span>{projects.length} total projects assigned</span>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Active Deliveries</p>
+              <div className="mt-3 flex items-end justify-between">
+                <h4 className="text-2xl lg:text-3xl font-bold text-slate-800 dark:text-white font-mono">{activeProjects}</h4>
+                <div className="flex items-center gap-1.5">
+                  <span className="tail-badge-info">{projects.length} total</span>
                 </div>
               </div>
             </div>
 
             {/* Metric 2: Delivery Velocity */}
-            <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Sprint Velocity</span>
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <TrendingUp size={18} />
-                </div>
+            <div className="tail-card p-5 md:p-6">
+              <div className="tail-metric-icon mb-5">
+                <TrendingUp size={24} className="text-emerald-600 dark:text-emerald-400" />
               </div>
-              <div className="mt-3">
-                <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
-                  {averageProgress}%
-                </div>
-                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-400 font-medium">
-                  <span>{completedProjects} projects shipped</span>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Sprint Velocity</p>
+              <div className="mt-3 flex items-end justify-between">
+                <h4 className="text-2xl lg:text-3xl font-bold text-slate-800 dark:text-white font-mono">{averageProgress}%</h4>
+                <div className="flex items-center gap-1.5">
+                  <span className="tail-badge-success">{completedProjects} shipped</span>
                 </div>
               </div>
             </div>
 
             {/* Metric 3: Open Issues / Bugs */}
-            <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Unresolved Bugs</span>
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  <AlertCircle size={18} />
-                </div>
+            <div className="tail-card p-5 md:p-6">
+              <div className="tail-metric-icon mb-5">
+                <AlertCircle size={24} className="text-amber-600 dark:text-amber-400" />
               </div>
-              <div className="mt-3">
-                <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Unresolved Bugs</p>
+              <div className="mt-3 flex items-end justify-between">
+                <h4 className="text-2xl lg:text-3xl font-bold text-slate-800 dark:text-white font-mono">
                   {issuesList.filter((i) => i.status !== "RESOLVED").length}
-                </div>
-                <div className={`flex items-center gap-1.5 mt-1 text-[11px] font-medium ${
-                  issuesList.filter((i) => i.status !== "RESOLVED" && (i.priority === "URGENT" || i.priority === "HIGH")).length > 0
-                    ? "text-rose-400"
-                    : "text-emerald-400"
-                }`}>
-                  <span>
-                    {issuesList.filter((i) => i.status !== "RESOLVED" && (i.priority === "URGENT" || i.priority === "HIGH")).length} critical priority
+                </h4>
+                <div className="flex items-center gap-1.5">
+                  <span className={issuesList.filter((i) => i.status !== "RESOLVED").length > 0 ? "tail-badge-warning" : "tail-badge-success"}>
+                    {issuesList.filter((i) => i.status !== "RESOLVED").length > 0 ? "Active" : "Zero"}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Metric 4: Standup Activity */}
-            <div className={`p-5 rounded-2xl border transition-all ${bgCard}`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs font-medium uppercase tracking-wider ${mutedText}`}>Standup Logs</span>
-                <div className="h-9 w-9 rounded-xl flex items-center justify-center bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  <CalendarDays size={18} />
-                </div>
+            <div className="tail-card p-5 md:p-6">
+              <div className="tail-metric-icon mb-5">
+                <CalendarDays size={24} className="text-indigo-600 dark:text-indigo-400" />
               </div>
-              <div className="mt-3">
-                <div className={`text-2xl font-bold font-mono ${dark ? "text-white" : "text-slate-900"}`}>
-                  {dailyUpdatesList.length}
-                </div>
-                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-indigo-400 font-medium">
-                  <span>Logged developer standups</span>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Standup Logs</p>
+              <div className="mt-3 flex items-end justify-between">
+                <h4 className="text-2xl lg:text-3xl font-bold text-slate-800 dark:text-white font-mono">{dailyUpdatesList.length}</h4>
+                <div className="flex items-center gap-1.5">
+                  <span className="tail-badge-info">Logged</span>
                 </div>
               </div>
             </div>
@@ -705,7 +732,7 @@ export default function DeveloperWorkspace({
                             setActiveTab("projects");
                           }}
                           className={`p-3.5 rounded-xl border cursor-pointer hover:border-indigo-500/30 transition ${
-                            dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                            dark ? "border-zinc-800 bg-[#09090b] hover:bg-zinc-900" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
@@ -787,7 +814,7 @@ export default function DeveloperWorkspace({
                       <div
                         key={up.id}
                         className={`p-3 rounded-xl border ${
-                          dark ? "border-[#1b2438] bg-[#0f1420]/60" : "border-[#ede5d8] bg-[#fbf8f2]"
+                          dark ? "border-zinc-800 bg-[#09090b]" : "border-zinc-200 bg-zinc-50"
                         }`}
                       >
                         <div className="flex items-center justify-between">
@@ -852,7 +879,7 @@ export default function DeveloperWorkspace({
                             setActiveTab("issues");
                           }}
                           className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer hover:border-amber-500/30 transition ${
-                            dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                            dark ? "border-zinc-800 bg-[#09090b] hover:bg-zinc-900" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
                           }`}
                         >
                           <div className="min-w-0 flex-1">
@@ -885,7 +912,7 @@ export default function DeveloperWorkspace({
                   <button
                     onClick={() => setActiveTab("projects")}
                     className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-left transition ${
-                      dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                      dark ? "border-zinc-800 bg-[#09090b] hover:bg-zinc-900" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
@@ -899,7 +926,7 @@ export default function DeveloperWorkspace({
                     <button
                       onClick={() => setActiveTab("sows")}
                       className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-left transition ${
-                        dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                        dark ? "border-zinc-800 bg-[#09090b] hover:bg-zinc-900" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -914,7 +941,7 @@ export default function DeveloperWorkspace({
                     <button
                       onClick={() => setActiveTab("vault")}
                       className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-left transition ${
-                        dark ? "border-[#1b2438] bg-[#0f1420]/60 hover:bg-[#151c2e]" : "border-[#ede5d8] bg-[#fbf8f2] hover:bg-[#f5ede0]"
+                        dark ? "border-zinc-800 bg-[#09090b] hover:bg-zinc-900" : "border-zinc-200 bg-zinc-50 hover:bg-zinc-100"
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -2082,9 +2109,9 @@ export default function DeveloperWorkspace({
                     className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                       active
                         ? (dark
-                            ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/30 shadow-sm font-semibold"
-                            : "bg-white text-[#a07432] border border-[#eee6da] shadow-sm font-semibold")
-                        : `${mutedText} hover:${dark ? "bg-white/5 text-[#f1f5f9]" : "bg-[#f4eee4] text-[#1c1917]"}`
+                            ? "bg-white text-black shadow-sm font-bold"
+                            : "btn-dark-gradient text-white shadow-sm font-bold")
+                        : `${mutedText} hover:${dark ? "bg-white/5 text-white" : "bg-black/5 text-black"}`
                     }`}
                   >
                     <tab.icon size={15} />
@@ -2093,8 +2120,8 @@ export default function DeveloperWorkspace({
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                           active
-                            ? (dark ? "bg-[#cca45f]/20 text-[#cca45f]" : "bg-[#f5eddf] text-[#a07432]")
-                            : (dark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-700")
+                            ? (dark ? "bg-black/20 text-black" : "bg-white/20 text-white")
+                            : (dark ? "bg-white/5 text-zinc-400" : "bg-zinc-100 text-zinc-700")
                         }`}
                       >
                         {tab.badge}
@@ -2112,42 +2139,34 @@ export default function DeveloperWorkspace({
       }
 
       return (
-        <div className={`luxury-app ${dark ? "dark-theme" : "light-theme"} h-screen w-full overflow-hidden flex flex-row ${bgMain} font-sans antialiased transition-colors duration-200`}>
+        <div className={`luxury-app role-shell developer-shell ${dark ? "dark-theme" : "light-theme"} h-screen w-full overflow-hidden flex flex-row ${bgMain} font-sans antialiased transition-colors duration-200`}>
           {/* SIDEBAR NAVIGATION */}
-          <aside className={`w-[260px] shrink-0 hidden md:flex flex-col border-r ${bgSidebar} h-screen z-20`}>
+          <aside className={`w-[260px] shrink-0 ${sidebarOpen ? "hidden md:flex" : "hidden"} flex-col border-r ${bgSidebar} h-screen z-20 select-none transition-all duration-300`}>
             {/* Brand Header */}
-            <div className="p-5 border-b border-inherit flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-base border ${
-                  dark 
-                    ? "bg-[#171f30] border-[#222d42] text-[#cca45f] shadow-[0_0_15px_rgba(204,164,95,0.15)]" 
-                    : "bg-white border-[#eee6da] text-[#a07432] shadow-sm"
-                }`}>
-                  Z
-                </div>
-                <div>
-                  <div className="font-bold text-[14px] leading-tight flex items-center gap-1.5">
-                    ZootechX<span className={dark ? "text-[#cca45f]" : "text-[#a07432]"}>.ai</span>
-                    <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${dark ? "bg-[#cca45f]" : "bg-[#a07432]"}`} />
-                  </div>
-                  <div className={`text-[10px] font-mono uppercase tracking-widest font-semibold ${dark ? "text-[#cca45f]" : "text-[#a07432]"}`}>
-                    {admin ? "Engineering Hub" : "Developer Workspace"}
-                  </div>
-                </div>
-              </div>
+            <div className={`px-4 py-3.5 border-b ${dark ? "border-slate-800" : "border-slate-200/80"} flex items-center justify-between`}>
+              <ZootechXLogo
+                variant="full"
+                size="sm"
+                dark={dark}
+                subtitle="ERP PLATFORM"
+              />
               {onBack && (
                 <button
                   onClick={onBack}
                   title="Return to portal"
-                  className={`p-1.5 rounded-lg border border-inherit transition ${dark ? "text-slate-400 hover:text-white hover:bg-white/5" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"}`}
+                  className={`p-1.5 rounded-lg border ${dark ? "border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/50" : "border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100"} transition`}
                 >
                   <ArrowLeft size={16} />
                 </button>
               )}
             </div>
 
+            <div className="px-3.5 pt-4 pb-2">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8] dark:text-slate-500">MENU</span>
+            </div>
+
             {/* Navigation List */}
-            <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
+            <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
               {navigationItems.map((item) => {
                 const active = activeTab === item.id;
                 return (
@@ -2157,25 +2176,19 @@ export default function DeveloperWorkspace({
                       setActiveTab(item.id as any);
                       setSelected(null);
                     }}
-                    className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-[13px] font-medium transition-all ${
+                    aria-current={active ? "page" : undefined}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
                       active
-                        ? (dark ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/30 shadow-md font-semibold" : "bg-white text-[#a07432] border border-[#eee6da] shadow-sm font-semibold")
-                        : `${mutedText} ${dark ? "hover:bg-[#121826] hover:text-[#f1f5f9]" : "hover:bg-[#f4eee4] hover:text-[#1c1917]"}`
+                        ? dark
+                          ? "bg-[#3758F9]/15 text-[#5475F9] font-semibold shadow-xs"
+                          : "bg-[#ECF2FE] text-[#3758F9] font-semibold shadow-xs"
+                        : dark
+                          ? "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                          : "text-[#475467] hover:text-[#1D2939] hover:bg-[#F2F4F7]"
                     }`}
                   >
-                    <item.icon size={18} className={active ? (dark ? "text-[#cca45f]" : "text-[#a07432]") : (dark ? "text-slate-400" : "text-slate-500")} />
-                    <span className="flex-1 text-left">{item.label}</span>
-                    {item.badge !== undefined && (
-                      <span
-                        className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
-                          active
-                            ? (dark ? "bg-[#cca45f]/20 text-[#cca45f]" : "bg-[#f5eddf] text-[#a07432]")
-                            : (dark ? "bg-white/5 text-slate-400" : "bg-slate-100 text-slate-700")
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
+                    <item.icon size={17} className={active ? (dark ? "text-[#5475F9]" : "text-[#3758F9]") : (dark ? "text-slate-400" : "text-[#667085]")} />
+                    <span className="flex-1 text-left truncate">{item.label}</span>
                   </button>
                 );
               })}
@@ -2183,19 +2196,22 @@ export default function DeveloperWorkspace({
 
             {/* Bottom Actions */}
             {onLogout && (
-              <div className="p-4 border-t border-inherit space-y-3">
-                <div className="flex items-center gap-2.5 px-2 py-1">
-                  <div className="h-8 w-8 rounded-lg bg-indigo-600/20 text-indigo-400 font-bold flex items-center justify-center text-xs border border-indigo-500/30 shrink-0">
-                    {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : "D"}
+              <div className={`p-4 border-t ${dark ? "border-slate-800" : "border-slate-200/80"} space-y-3`}>
+                <div className={`flex items-center gap-2.5 px-3 py-2 rounded-xl ${dark ? "bg-slate-800/40 border border-slate-800" : "bg-slate-50 border border-slate-200/80"}`}>
+                  <div className={`h-8 w-8 rounded-lg font-bold flex items-center justify-center text-xs shrink-0 ${dark ? "bg-white text-black" : "bg-slate-900 text-white"} shadow-2xs`}>
+                    {currentUser?.name ? currentUser.name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() : "DE"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold truncate leading-tight">{currentUser?.name || "Developer"}</p>
-                    <p className={`text-[10px] truncate leading-tight ${mutedText}`}>{currentUser?.email || "dev@zootechx.com"}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-xs font-bold truncate leading-tight ${dark ? "text-white" : "text-slate-900"}`}>{currentUser?.name || "Developer"}</p>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    </div>
+                    <p className="text-[10px] truncate leading-tight text-slate-500 dark:text-slate-400">{currentUser?.email || "dev@zootechx"}</p>
                   </div>
                 </div>
                 <button
                   onClick={onLogout}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"
                 >
                   <LogOut size={15} />
                   <span>Log out</span>
@@ -2206,88 +2222,211 @@ export default function DeveloperWorkspace({
 
           {/* MAIN VIEWPORT */}
           <div className="flex-1 min-w-0 h-screen flex flex-col overflow-hidden">
-            {/* TOP BAR */}
-            <header className={`w-full h-16 shrink-0 border-b flex items-center justify-between px-4 sm:px-6 backdrop-blur-xl ${bgSidebar}`}>
-              <div className="flex items-center gap-3">
-                <h2 className={`text-lg font-bold tracking-tight capitalize ${dark ? "text-white" : "text-slate-900"}`}>
-                  {activeTab === "dashboard"
-                    ? "Engineering Pulse"
-                    : activeTab === "projects"
-                    ? "Projects & Tasks"
-                    : activeTab === "daily"
-                    ? "Daily Developer Updates"
-                    : activeTab === "sows"
-                    ? "Scope of Work (SOW)"
-                    : activeTab === "issues"
-                    ? "Issues & Bug Tracker"
-                    : activeTab === "team"
-                    ? "Team Developers"
-                    : activeTab === "assign"
-                    ? "Assign Project"
-                    : "Credentials & Secret Vault"}
-                </h2>
-                <div className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 text-[10px] font-bold text-indigo-400">
-                  {currentUser?.name ? `${currentUser.name} • Dev` : (admin ? "Super Admin Access" : "Developer Role")}
+            {/* TOP BAR - Exact TailAdmin Layout matching demo.tailadmin.com */}
+            <header className={`w-full h-[68px] shrink-0 border-b flex items-center justify-between gap-4 px-4 sm:px-6 transition-colors duration-200 relative z-30 ${
+              dark
+                ? "bg-[#090d16] border-slate-800 text-white shadow-[0_2px_12px_-2px_rgba(0,0,0,0.3)]"
+                : "bg-white border-slate-200/90 text-slate-900 shadow-[0_2px_12px_-2px_rgba(15,23,42,0.04)]"
+            }`}>
+              {/* Left: Sidebar Collapse Toggle + Search Bar */}
+              <div className="flex items-center gap-3.5 flex-1 max-w-[500px]">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="h-10 w-10 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs transition shrink-0"
+                  title="Toggle Sidebar"
+                >
+                  <Menu size={18} />
+                </button>
+
+                <div ref={searchContainerRef} className="flex items-center flex-1 relative">
+                  <Search size={16} className={`absolute left-3.5 ${searchQuery ? "text-emerald-500" : "text-slate-400"} transition-colors pointer-events-none`} />
+                  <input
+                    value={searchQuery}
+                    onFocus={() => setIsSearchOpen(true)}
+                    onChange={(e) => { setSearchQuery(e.target.value); setIsSearchOpen(true); }}
+                    placeholder="Search or type command..."
+                    className={`w-full h-10 pl-10 pr-14 rounded-xl border text-sm transition-all outline-none shadow-2xs ${
+                      dark
+                        ? "bg-slate-900/90 border-slate-800 text-slate-100 placeholder-slate-500 focus:border-emerald-500/80 focus:bg-slate-900 focus:ring-2 focus:ring-emerald-500/20"
+                        : "bg-slate-50/70 border-slate-200/90 text-slate-900 placeholder-slate-400 hover:bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15"
+                    }`}
+                  />
+                  {searchQuery ? (
+                    <button
+                      type="button"
+                      onClick={() => { setSearchQuery(""); setIsSearchOpen(false); }}
+                      className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-md transition"
+                      title="Clear search"
+                    >
+                      <X size={13} />
+                    </button>
+                  ) : (
+                    <span className="absolute right-3 text-[11px] font-mono text-slate-400 border border-slate-200 dark:border-slate-700/60 rounded px-1.5 py-0.5 bg-white dark:bg-slate-800 pointer-events-none">
+                      ⌘K
+                    </span>
+                  )}
+
+                  {searchQuery && isSearchOpen && (
+                    <div className={`absolute top-12 left-0 w-full rounded-2xl border shadow-2xl z-30 max-h-[320px] overflow-auto ${bgCard} p-2`}>
+                      {searchMatches.projects.length > 0 && (
+                        <div>
+                          <div className="px-2 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Projects</div>
+                          {searchMatches.projects.map(project => (
+                            <button key={project.id} onClick={() => { setActiveTab("projects"); setSelected(project); setSearchQuery(""); setIsSearchOpen(false); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${dark ? "bg-white/5" : "bg-slate-50"}`}>
+                              <div className="h-8 w-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[11px] font-bold">
+                                {project.name ? project.name.charAt(0) : "P"}
+                              </div>
+                              <div>
+                                <div className="text-[13px] font-medium">{project.name}</div>
+                                <div className="text-[11px] text-slate-400">{project.client_name || "Internal Project"} · {project.status}</div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {searchMatches.developers.length > 0 && (
+                        <div>
+                          <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Developers</div>
+                          {searchMatches.developers.map(dev => (
+                            <button key={dev.id} onClick={() => { setActiveTab("team"); setSearchQuery(""); setIsSearchOpen(false); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${dark ? "bg-white/5" : "bg-slate-50"}`}>
+                              <div className="h-8 w-8 rounded-xl bg-emerald-600/10 text-emerald-400 flex items-center justify-center">
+                                <Users size={14} />
+                              </div>
+                              <div>
+                                <div className="text-[13px] font-medium">{dev.name}</div>
+                                <div className="text-[11px] text-slate-400">{dev.email}</div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {searchMatches.issues.length > 0 && (
+                        <div>
+                          <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Issues & Bugs</div>
+                          {searchMatches.issues.map(iss => (
+                            <button key={iss.id} onClick={() => { setActiveTab("issues"); setSelectedIssue(iss); setSearchQuery(""); setIsSearchOpen(false); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${dark ? "bg-white/5" : "bg-slate-50"}`}>
+                              <div className="h-8 w-8 rounded-xl bg-rose-600/10 text-rose-400 flex items-center justify-center">
+                                <Bug size={14} />
+                              </div>
+                              <div>
+                                <div className="text-[13px] font-medium">{iss.title}</div>
+                                <div className="text-[11px] text-slate-400">{iss.project_name} · {iss.priority}</div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {searchMatches.projects.length === 0 && searchMatches.developers.length === 0 && searchMatches.issues.length === 0 && (
+                        <div className="p-3 text-[13px] text-slate-400">No matching projects or tasks found</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                {/* Day & Night Theme Toggle Button */}
-                <button
-                  onClick={handleToggleTheme}
-                  title={dark ? "Switch to Day (Light Mode)" : "Switch to Night (Dark Mode)"}
-                  aria-label={dark ? "Switch to Day (Light Mode)" : "Switch to Night (Dark Mode)"}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${
-                    dark 
-                      ? "bg-[#121826] border-[#1e293b] text-[#f1f5f9] hover:border-[#cca45f]/40 shadow-sm" 
-                      : "bg-white border-[#eee6da] text-[#1c1917] hover:border-[#a07432]/40 shadow-sm"
-                  }`}
-                >
-                  {dark ? (
-                    <Moon size={13} className="text-[#cca45f]" />
-                  ) : (
-                    <Sun size={13} className="text-amber-500" />
-                  )}
-                  <span className="text-[10px] font-bold tracking-widest uppercase font-mono">
-                    {dark ? "NIGHT" : "DAY"}
-                  </span>
-                  <div className={`w-8 h-4 rounded-full p-0.5 transition-colors flex items-center ${
-                    dark ? "bg-[#090d16] justify-end" : "bg-[#ede5d8] justify-start"
-                  }`}>
-                    <div className={`w-3 h-3 rounded-full shadow transition-transform ${
-                      dark ? "bg-[#cca45f]" : "bg-[#b88a44]"
-                    }`} />
-                  </div>
-                </button>
+              <div className="flex-1" />
 
+              {/* Right: Actions, Theme Toggle, Notifications, Profile */}
+              <div className="flex items-center gap-3">
                 <button
                   onClick={() => void load()}
-                  title="Refresh projects"
-                  className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${
-                    dark ? "border-white/10 text-slate-400 hover:text-white hover:bg-white/5" : "border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                  }`}
+                  title="Refresh Projects"
+                  className="h-10 w-10 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs transition shrink-0"
                 >
-                  <RefreshCw size={15} className={loading ? "animate-spin text-indigo-400" : ""} />
+                  <RefreshCw size={15} className={loading ? "animate-spin text-emerald-500" : ""} />
                 </button>
 
-                {/* Mobile tab buttons */}
-                <div className="flex md:hidden items-center gap-1">
-                  {navigationItems.map((it) => (
-                    <button
-                      key={it.id}
-                      onClick={() => {
-                        setActiveTab(it.id as any);
-                        setSelected(null);
-                      }}
-                      className={`p-2 rounded-xl border ${
-                        activeTab === it.id
-                          ? "bg-indigo-600 text-white border-indigo-600"
-                          : (dark ? "border-white/10 text-slate-400 hover:text-white" : "border-slate-200 text-slate-600 hover:bg-slate-100")
-                      }`}
-                    >
-                      <it.icon size={16} />
-                    </button>
-                  ))}
+                {/* Circular Theme Toggle Button (TailAdmin style) */}
+                <button
+                  onClick={handleToggleTheme}
+                  title={dark ? "Switch to Day Mode" : "Switch to Night Mode"}
+                  className="h-10 w-10 rounded-full border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs transition shrink-0"
+                >
+                  {dark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
+                </button>
+
+                {/* Circular Notification Bell with Orange Dot (TailAdmin style) */}
+                <div ref={notifContainerRef} className="relative">
+                  <button
+                    onClick={() => setNotifOpen(!notifOpen)}
+                    title="Notifications"
+                    aria-label="View notifications"
+                    className="h-10 w-10 rounded-full border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs relative transition shrink-0"
+                  >
+                    <Bell size={18} />
+                    {pendingAlerts.length > 0 && (
+                      <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#f97316] ring-2 ring-white dark:ring-slate-900" />
+                    )}
+                  </button>
+                  {notifOpen && (
+                    <div className={`absolute right-0 top-12 w-[340px] rounded-2xl border shadow-2xl z-40 ${bgCard} overflow-hidden`}>
+                      <div className={`p-4 border-b ${dark ? "border-slate-800" : "border-slate-100"}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="font-bold text-[14px]">Engineering Alerts</div>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                              DEV
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-400">{pendingAlerts.length} open</span>
+                        </div>
+                      </div>
+                      <div className="max-h-[300px] overflow-auto divide-y divide-slate-100 dark:divide-slate-800">
+                        {pendingAlerts.slice(0, 6).map((iss) => (
+                          <div key={iss.id} onClick={() => { setActiveTab("issues"); setSelectedIssue(iss); setNotifOpen(false); }} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition flex items-start gap-2.5">
+                            <div className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">{iss.title}</p>
+                              <p className="text-[11px] text-slate-400 truncate">{iss.project_name} · {iss.priority}</p>
+                            </div>
+                          </div>
+                        ))}
+                        {pendingAlerts.length === 0 && (
+                          <div className="p-6 text-center text-xs text-slate-400">All bugs resolved 🎉</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* User Profile Pill (TailAdmin style: avatar + name + chevron) */}
+                <div ref={userMenuRef} className="relative">
+                  <button
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className="flex items-center gap-2.5 pl-2 py-1 pr-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800/60 transition group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-sm flex items-center justify-center overflow-hidden shrink-0 shadow-xs ring-1 ring-slate-900/10 dark:ring-white/20">
+                      {currentUser?.name ? currentUser.name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() : "DE"}
+                    </div>
+                    <span className="hidden sm:inline text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white transition">
+                      {currentUser?.name?.split(" ")[0] || "Developer"}
+                    </span>
+                    <ChevronDown size={15} className={`text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-transform duration-200 ${userDropdownOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {userDropdownOpen && (
+                    <div className={`absolute right-0 top-12 w-56 rounded-2xl border shadow-2xl z-30 p-2 ${bgCard}`}>
+                      <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser?.name || "Developer"}</p>
+                        <p className="text-[11px] text-slate-400 truncate">{currentUser?.email || "dev@zootechx"}</p>
+                      </div>
+                      <button
+                        onClick={() => { setActiveTab("dashboard"); setUserDropdownOpen(false); }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:${dark ? "bg-white/5" : "bg-slate-100"} transition`}
+                      >
+                        <Settings size={14} />
+                        <span>Engineering Pulse</span>
+                      </button>
+                      <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                      <button
+                        onClick={() => { setUserDropdownOpen(false); if (onLogout) onLogout(); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-500 hover:bg-rose-500/10 transition"
+                      >
+                        <LogOut size={14} />
+                        <span>Sign out</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </header>

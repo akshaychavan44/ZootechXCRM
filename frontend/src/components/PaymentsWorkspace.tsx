@@ -158,10 +158,8 @@ export default function PaymentsWorkspace({
     } finally {
       setSaving(false);
     }
-  };
-
-  const cardBg = dark ? "bg-[#111628]/90 border-white/10 text-white" : "bg-white border-slate-200 text-slate-900";
-  const inputBg = dark ? "bg-[#182035] border-white/10 text-white placeholder-slate-400" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400";
+  };  const cardBg = dark ? "bg-[#0f172a] border-slate-800 text-slate-100 shadow-sm" : "bg-white border-slate-200/80 text-slate-900 shadow-sm";
+  const inputBg = dark ? "bg-[#090d16] border-slate-800 text-slate-100 placeholder-slate-500 focus:border-slate-600" : "bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-slate-400";
   const muted = dark ? "text-slate-400" : "text-slate-500";
   const showCreatedBy = role === "SUPER_ADMIN";
 
@@ -170,79 +168,83 @@ export default function PaymentsWorkspace({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Payments Hub</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Payments Hub</h1>
           <p className={`text-xs mt-1 ${muted}`}>
             Real-time tracking of client invoices, settlements, and outstanding balances.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => void load()}
             title="Refresh payments"
-            className={`flex h-10 w-10 items-center justify-center rounded-xl border transition ${
-              dark ? "border-white/10 hover:bg-white/5" : "border-slate-200 hover:bg-slate-100"
-            }`}
+            className="tail-btn-secondary flex h-9 w-9 items-center justify-center p-0"
           >
-            <RefreshCw size={15} className={loading ? "animate-spin text-indigo-400" : muted} />
+            <RefreshCw size={14} className={loading ? "animate-spin text-indigo-400" : muted} />
           </button>
           <button
             onClick={() => {
               setNotice("");
               setOpen(true);
             }}
-            className="h-10 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 px-4 text-xs font-semibold text-white shadow-lg shadow-indigo-600/25 flex items-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="tail-btn-primary flex items-center gap-1.5"
           >
-            <Plus size={16} />
+            <Plus size={15} />
             <span>Record Payment</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Stats Cards matching TailAdmin Metric style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Invoiced", value: stats.invoiced, color: "text-indigo-400", border: "border-indigo-500/20" },
-          { label: "Total Collected", value: stats.received, color: "text-emerald-400", border: "border-emerald-500/20" },
-          { label: "Pending Balance", value: stats.due, color: "text-amber-400", border: "border-amber-500/20" },
-          { label: "Overdue Balance", value: stats.overdue, color: "text-rose-400", border: "border-rose-500/20" },
+          { label: "Total Invoiced", value: stats.invoiced, icon: CreditCard, bg: "bg-indigo-500/10 text-indigo-500", tag: "Invoiced" },
+          { label: "Total Collected", value: stats.received, icon: CheckCircle2, bg: "bg-emerald-500/10 text-emerald-500", tag: "Settled" },
+          { label: "Pending Balance", value: stats.due, icon: Clock, bg: "bg-amber-500/10 text-amber-500", tag: "Due" },
+          { label: "Overdue Balance", value: stats.overdue, icon: AlertCircle, bg: "bg-rose-500/10 text-rose-500", tag: "Overdue" },
         ].map((item) => (
-          <motion.div
-            key={item.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`rounded-3xl border p-5 ${cardBg} shadow-sm relative overflow-hidden`}
-          >
-            <div className={`text-[11px] font-bold uppercase tracking-wider ${muted}`}>
-              {item.label}
+          <div key={item.label} className="tail-card p-5 flex items-start justify-between">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                {item.label}
+              </span>
+              <h4 className="mt-2 text-2xl font-bold font-mono text-slate-900 dark:text-white">
+                {money(Number(item.value))}
+              </h4>
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <ArrowUpRight size={13} /> Realtime
+                </span>
+                <span>• Live Ledger</span>
+              </div>
             </div>
-            <div className={`mt-2 text-2xl lg:text-3xl font-bold mono ${item.color}`}>
-              {money(Number(item.value))}
+            <div className={`tail-metric-icon ${item.bg}`}>
+              <item.icon size={22} />
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
       {/* Filters & Search Bar */}
-      <div className={`rounded-2xl border p-3.5 flex flex-col sm:flex-row gap-3 items-center justify-between ${cardBg}`}>
+      <div className="tail-card p-3 flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
           <Search size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${muted}`} />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by client or invoice number..."
-            className={`h-10 w-full rounded-xl border pl-9 pr-3 text-xs outline-none focus:border-indigo-500 ${inputBg}`}
+            className={`h-9 w-full rounded-xl border pl-9 pr-3 text-xs outline-none ${inputBg}`}
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
           {["ALL", "Paid", "Partially Paid", "Unpaid"].map((st) => (
             <button
               key={st}
               onClick={() => setStatus(st)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 status === st
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                  : `${muted} border border-inherit hover:bg-white/5`
+                  ? "bg-indigo-600 text-white shadow-xs font-bold"
+                  : `${muted} hover:bg-slate-100 dark:hover:bg-slate-800`
               }`}
             >
               {st === "ALL" ? "All Statuses" : st}
@@ -253,7 +255,7 @@ export default function PaymentsWorkspace({
 
       {/* Notice Banner */}
       {notice && (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs font-semibold text-rose-400 flex items-center justify-between">
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs font-semibold text-rose-500 dark:text-rose-400 flex items-center justify-between">
           <span>{notice}</span>
           <button onClick={() => setNotice("")} className="opacity-70 hover:opacity-100">
             <X size={15} />
@@ -262,10 +264,10 @@ export default function PaymentsWorkspace({
       )}
 
       {/* Payments Table */}
-      <div className={`overflow-hidden rounded-3xl border ${cardBg} shadow-sm`}>
+      <div className="tail-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-[1100px] w-full text-xs">
-            <thead className="border-b border-inherit bg-white/5 text-[11px] uppercase tracking-wider text-slate-400 font-bold">
+            <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/40 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">
               <tr>
                 <th className="p-3.5 text-left">Invoice No</th>
                 <th className="p-3.5 text-left">Client Name</th>
@@ -278,7 +280,7 @@ export default function PaymentsWorkspace({
                 {showCreatedBy && <th className="p-3.5 text-left">Recorded By</th>}
               </tr>
             </thead>
-            <tbody className="divide-y border-inherit">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
               {filtered.map((row) => (
                 <tr key={row.invoice_id} className="hover:bg-white/5 transition">
                   <td className="p-3.5 font-bold font-mono text-indigo-400">{row.invoice_number}</td>
@@ -479,14 +481,14 @@ export default function PaymentsWorkspace({
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
-                    className="h-10 px-4 rounded-xl border border-inherit text-xs font-semibold"
+                    className="tail-btn-secondary"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={saving || !form.invoiceId}
-                    className="h-10 px-5 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 text-white font-semibold text-xs shadow hover:opacity-95 disabled:opacity-50"
+                    className="tail-btn-primary"
                   >
                     {saving ? "Recording..." : "Confirm & Settle Payment"}
                   </button>

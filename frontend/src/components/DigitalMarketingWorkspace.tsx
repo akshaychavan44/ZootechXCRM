@@ -7,13 +7,15 @@ import {
   Target, Trash2, TrendingUp, UserCheck, Users, X, DollarSign, PlayCircle,
   Building2, Phone, ShieldCheck, CheckCheck, BarChart3, PieChart as PieIcon,
   Radio, Zap, Edit3, Download, Eye, Settings, Sliders, Activity, Filter,
-  FolderPlus, FileText, CheckSquare, Clock, AlertCircle, Briefcase, Link2
+  FolderPlus, FileText, CheckSquare, Clock, AlertCircle, Briefcase, Link2,
+  Menu, ChevronDown, Bell, LayoutDashboard
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from "recharts";
 import { apiFetch } from "../lib/api";
+import ZootechXLogo from "./ZootechXLogo";
 
 interface DigitalMarketingWorkspaceProps {
   admin?: boolean;
@@ -100,6 +102,7 @@ export default function DigitalMarketingWorkspace({
   currentUser,
 }: DigitalMarketingWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "clients" | "projects" | "assets" | "mockups">("overview");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dark, setDark] = useState<boolean>(() => {
     if (propDark !== undefined) return propDark;
     if (typeof window !== "undefined") {
@@ -148,6 +151,45 @@ export default function DigitalMarketingWorkspace({
   const [assetStatusFilter, setAssetStatusFilter] = useState<string>("ALL");
   const [assetTypeFilter, setAssetTypeFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const searchContainerRef = React.useRef<HTMLDivElement>(null);
+  const userMenuRef = React.useRef<HTMLDivElement>(null);
+  const notifContainerRef = React.useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserDropdownOpen(false);
+      }
+      if (notifContainerRef.current && !notifContainerRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const searchMatches = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return { clients: [], projects: [], assets: [] };
+    return {
+      clients: clients.filter(c => (c.name || "").toLowerCase().includes(q) || (c.industry || "").toLowerCase().includes(q) || (c.contact_name || "").toLowerCase().includes(q)).slice(0, 4),
+      projects: projects.filter(p => (p.title || "").toLowerCase().includes(q) || (p.client_name || "").toLowerCase().includes(q) || (p.category || "").toLowerCase().includes(q)).slice(0, 4),
+      assets: assets.filter(a => (a.name || "").toLowerCase().includes(q) || (a.client_name || "").toLowerCase().includes(q) || (a.asset_type || "").toLowerCase().includes(q)).slice(0, 4),
+    };
+  }, [searchQuery, clients, projects, assets]);
+
+  const marketingAlerts = useMemo(() => {
+    return projects.filter(p => p.status === "PLANNING" || p.status === "IN_REVIEW");
+  }, [projects]);
+  const [trafficPeriod, setTrafficPeriod] = useState<"today" | "week" | "month">("today");
 
   // Modals
   const [showAddClientModal, setShowAddClientModal] = useState(false);
@@ -554,18 +596,20 @@ export default function DigitalMarketingWorkspace({
     });
   }, [assets, selectedClientId, assetStatusFilter, assetTypeFilter, searchQuery]);
 
-  // Exact luxury aesthetic matching user's reference
-  const pageBg = dark ? "bg-[#0d1117] text-[#f0f3f6]" : "bg-[#fbf8f3] text-[#141414]";
-  const sandCard = dark ? "bg-[#161b22] border-[#30363d]" : "bg-[#f4efe6] border-[#e7e1d5]";
-  const whiteCard = dark ? "bg-[#161b22] border-[#30363d]" : "bg-[#ffffff] border-[#ede7dc]";
-  const textSub = dark ? "text-[#8b949e]" : "text-[#55524e]";
-  const textMuted = dark ? "text-[#6e7681]" : "text-[#8c8882]";
-  const pillBlack = dark ? "bg-[#ffffff] text-[#0d1117] hover:bg-[#eaecef]" : "bg-[#111111] text-[#ffffff] hover:bg-[#000000]";
-  const pillSand = dark ? "bg-[#21262d] text-[#c9d1d9] border-[#30363d]" : "bg-[#ede7dc] text-[#33312e] border-transparent";
-  const pillOutline = dark ? "bg-[#161b22] border-[#30363d] text-[#c9d1d9] hover:bg-[#21262d]" : "bg-white/80 border-[#ded8ce] text-[#222222] hover:bg-white";
+  // Professional SaaS Theme Palette matching screenshot
+  const pageBg = dark ? "bg-[#090d16] text-slate-100" : "bg-[#f8fafc] text-slate-900";
+  const sandCard = dark ? "bg-[#0f172a] border-slate-800 text-slate-100 shadow-sm" : "bg-white border-slate-200/80 text-slate-900 shadow-sm";
+  const whiteCard = dark ? "bg-[#0f172a] border-slate-800 text-slate-100 shadow-sm" : "bg-white border-slate-200/80 text-slate-900 shadow-sm";
+  const bgCard = whiteCard;
+  const textSub = dark ? "text-slate-400" : "text-slate-500";
+  const textMuted = dark ? "text-slate-400" : "text-slate-500";
+  const pillBlack = "bg-[#0f172a] dark:bg-white text-white dark:text-slate-900 shadow-sm";
+  const pillSand = dark ? "bg-slate-800 text-slate-300 border-slate-700" : "bg-slate-100 text-slate-900 border-slate-200";
+  const pillOutline = dark ? "bg-[#0f172a] border-slate-800 text-slate-300 hover:bg-slate-800" : "bg-white border-slate-200 text-slate-800 hover:bg-slate-50";
+  const bgSidebar = dark ? "bg-[#0c1017] border-slate-800 text-slate-300" : "bg-white border-slate-200/90 text-slate-700";
 
   return (
-    <div className={`${embedded ? "w-full min-h-full pb-16" : "h-screen w-full overflow-y-auto"} transition-colors duration-200 ${pageBg}`}>
+    <div className={`role-shell marketing-shell ${dark ? "dark-theme" : "light-theme"} ${embedded ? "w-full min-h-full pb-16" : "h-screen w-full overflow-hidden flex flex-row"} transition-colors duration-200 ${pageBg}`}>
       {/* Toast Notice */}
       <AnimatePresence>
         {notice && (
@@ -574,7 +618,7 @@ export default function DigitalMarketingWorkspace({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full px-5 py-2 text-xs font-mono font-medium shadow-xl border ${
-              dark ? "bg-[#161b22] text-[#58a6ff] border-[#30363d]" : "bg-[#111111] text-white border-black"
+              dark ? "bg-slate-900 text-white border-slate-700" : "bg-black text-white border-black"
             }`}
           >
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -583,406 +627,770 @@ export default function DigitalMarketingWorkspace({
         )}
       </AnimatePresence>
 
-      {/* TOP HEADER */}
-      <header className={`sticky top-0 z-40 w-full border-b ${dark ? "border-[#21262d] bg-[#0d1117]/85" : "border-[#ede7dc] bg-[#fbf8f3]/85"} backdrop-blur-md px-4 sm:px-8 py-3.5`}>
-        <div className="w-full flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            {admin && onBack && !embedded && (
+      {/* SIDEBAR NAVIGATION (Standalone) */}
+      {!embedded && (
+        <aside className={`w-[260px] shrink-0 ${sidebarOpen ? "hidden md:flex" : "hidden"} flex-col border-r ${bgSidebar} h-screen z-20 select-none transition-all duration-300`}>
+          {/* Brand Header */}
+          <div className={`px-4 py-3.5 border-b ${dark ? "border-slate-800" : "border-slate-200/80"} flex items-center justify-between`}>
+            <ZootechXLogo variant="full" size="sm" dark={dark} subtitle="MARKETING HUB" />
+            {admin && onBack && (
+              <button
+                onClick={onBack}
+                title="Return to portal"
+                className={`p-1.5 rounded-lg border ${dark ? "border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800/50" : "border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100"} transition`}
+              >
+                <ChevronRight size={16} className="rotate-180" />
+              </button>
+            )}
+          </div>
+
+          <div className="px-3.5 pt-4 pb-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#94A3B8] dark:text-slate-500">MENU</span>
+          </div>
+
+          {/* Navigation List */}
+          <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+            {[
+              { id: "overview", label: "Overview", icon: LayoutDashboard },
+              { id: "clients", label: "Clients", icon: Users },
+              { id: "projects", label: "Campaign Projects", icon: Target },
+              { id: "assets", label: "Creative Assets", icon: Layers },
+              { id: "mockups", label: "Ad Mockups", icon: Megaphone, isNew: true },
+            ].map((item) => {
+              const active = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id as any)}
+                  aria-current={active ? "page" : undefined}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                    active
+                      ? dark
+                        ? "bg-[#3758F9]/15 text-[#5475F9] font-semibold shadow-xs"
+                        : "bg-[#ECF2FE] text-[#3758F9] font-semibold shadow-xs"
+                      : dark
+                        ? "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                        : "text-[#475467] hover:text-[#1D2939] hover:bg-[#F2F4F7]"
+                  }`}
+                >
+                  <item.icon size={17} className={active ? (dark ? "text-[#5475F9]" : "text-[#3758F9]") : (dark ? "text-slate-400" : "text-[#667085]")} />
+                  <span className="flex-1 text-left truncate">{item.label}</span>
+                  {item.isNew && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F8EE] text-[#059669] dark:bg-emerald-500/10 dark:text-emerald-400">
+                      NEW
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Bottom Actions */}
+          <div className={`p-4 border-t ${dark ? "border-slate-800" : "border-slate-200/80"} space-y-3`}>
+            <div className={`flex items-center gap-2.5 px-3 py-2 rounded-xl ${dark ? "bg-slate-800/40 border border-slate-800" : "bg-slate-50 border border-slate-200/80"}`}>
+              <div className={`h-8 w-8 rounded-lg font-bold flex items-center justify-center text-xs shrink-0 ${dark ? "bg-white text-black" : "bg-slate-900 text-white"} shadow-2xs`}>
+                {currentUser?.name ? currentUser.name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() : "DM"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className={`text-xs font-bold truncate leading-tight ${dark ? "text-white" : "text-slate-900"}`}>{currentUser?.name || "Marketing"}</p>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                </div>
+                <p className="text-[10px] truncate leading-tight text-slate-500 dark:text-slate-400">{currentUser?.email || "marketing@zootechx"}</p>
+              </div>
+            </div>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition"
+              >
+                <LogOut size={15} />
+                <span>Sign out</span>
+              </button>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {/* MAIN VIEWPORT */}
+      <div className={`flex-1 min-w-0 ${embedded ? "" : "h-screen overflow-hidden flex flex-col"}`}>
+        {/* TOP HEADER - Exact TailAdmin Layout matching demo.tailadmin.com */}
+        <header className={`sticky top-0 z-40 w-full h-[68px] border-b flex items-center justify-between gap-4 px-4 sm:px-6 transition-colors duration-200 relative ${
+          dark
+            ? "border-slate-800 bg-[#090d16] text-white shadow-[0_2px_12px_-2px_rgba(0,0,0,0.3)]"
+            : "border-slate-200/90 bg-white text-slate-900 shadow-[0_2px_12px_-2px_rgba(15,23,42,0.04)]"
+        }`}>
+          {/* Left: Hamburger / Back Toggle + Search Bar */}
+          <div className="flex items-center gap-3 flex-1 max-w-[440px]">
+            {admin && onBack && !embedded ? (
               <button
                 type="button"
                 onClick={onBack}
-                className={`flex h-8 w-8 items-center justify-center rounded-full border ${pillOutline} transition`}
+                className="h-10 w-10 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs transition shrink-0"
                 title="Back to Admin"
               >
-                <ChevronRight size={14} className="rotate-180" />
+                <ChevronRight size={16} className="rotate-180" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (embedded) {
+                    setMobileNavOpen(!mobileNavOpen);
+                  } else {
+                    setSidebarOpen(!sidebarOpen);
+                    setMobileNavOpen(!mobileNavOpen);
+                  }
+                }}
+                className="h-10 w-10 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-2xs transition shrink-0"
+                title="Toggle Sidebar"
+              >
+                <Menu size={18} />
               </button>
             )}
-            <div className="flex items-center gap-2">
-              <div className="h-6 w-6 rounded-md bg-[#111111] text-white flex items-center justify-center font-bold text-xs font-serif">
-                Z
-              </div>
-              <span className="font-semibold tracking-tight text-sm">Marketing Workspace</span>
-              {currentUser?.name && (
-                <span className="rounded-full bg-pink-500/10 border border-pink-500/20 px-2.5 py-0.5 text-[10px] font-bold text-pink-400">
-                  {currentUser.name}
-                </span>
-              )}
-              {readOnly && (
-                <span className="rounded-full bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-0.5 text-[10px] font-bold text-indigo-400">
-                  Shared Live View
-                </span>
-              )}
-            </div>
-          </div>
 
-          {/* Navigation Pill Switcher */}
-          <div className={`hidden md:flex items-center gap-1 rounded-full p-1 border ${dark ? "bg-[#161b22] border-[#30363d]" : "bg-[#ede7dc]/60 border-[#ded8ce]"}`}>
+            <div ref={searchContainerRef} className="flex items-center flex-1 relative">
+              <Search size={16} className={`absolute left-3.5 ${searchQuery ? "text-pink-500" : "text-slate-400"} transition-colors pointer-events-none`} />
+              <input
+                value={searchQuery}
+                onFocus={() => setIsSearchOpen(true)}
+              onChange={(e) => { setSearchQuery(e.target.value); setIsSearchOpen(true); }}
+              placeholder="Search or type command..."
+              className={`w-full h-10 pl-10 pr-14 rounded-xl border text-sm transition-all outline-none shadow-2xs ${
+                dark
+                  ? "bg-slate-900/90 border-slate-800 text-slate-100 placeholder-slate-500 focus:border-pink-500/80 focus:bg-slate-900 focus:ring-2 focus:ring-pink-500/20"
+                  : "bg-slate-50/70 border-slate-200/90 text-slate-900 placeholder-slate-400 hover:bg-slate-50 focus:bg-white focus:border-pink-500 focus:ring-2 focus:ring-pink-500/15"
+              }`}
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(""); setIsSearchOpen(false); }}
+                className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 rounded-md transition"
+                title="Clear search"
+              >
+                <X size={13} />
+              </button>
+            ) : (
+              <span className="absolute right-3 text-[11px] font-mono text-slate-400 border border-slate-200 dark:border-slate-700/60 rounded px-1.5 py-0.5 bg-white dark:bg-slate-800 pointer-events-none">
+                ⌘K
+              </span>
+            )}
+
+            {searchQuery && isSearchOpen && (
+              <div className={`absolute top-12 left-0 w-full rounded-2xl border shadow-2xl z-50 max-h-[320px] overflow-auto ${bgCard} p-2`}>
+                {searchMatches.clients.length > 0 && (
+                  <div>
+                    <div className="px-2 pt-1 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Marketing Clients</div>
+                    {searchMatches.clients.map(client => (
+                      <button key={client.id} onClick={() => { setActiveTab("clients"); setSearchQuery(""); setIsSearchOpen(false); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${dark ? "bg-white/5" : "bg-slate-50"}`}>
+                        <div className="h-8 w-8 rounded-full bg-pink-600 text-white flex items-center justify-center text-[11px] font-bold">
+                          {client.name ? client.name.charAt(0) : "C"}
+                        </div>
+                        <div>
+                          <div className="text-[13px] font-medium">{client.name}</div>
+                          <div className="text-[11px] text-slate-400">{client.industry} · {client.contact_name}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {searchMatches.projects.length > 0 && (
+                  <div>
+                    <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Campaigns & Projects</div>
+                    {searchMatches.projects.map(project => (
+                      <button key={project.id} onClick={() => { setActiveTab("projects"); setSearchQuery(""); setIsSearchOpen(false); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${dark ? "bg-white/5" : "bg-slate-50"}`}>
+                        <div className="h-8 w-8 rounded-xl bg-pink-600/10 text-pink-400 flex items-center justify-center">
+                          <Target size={14} />
+                        </div>
+                        <div>
+                          <div className="text-[13px] font-medium">{project.title}</div>
+                          <div className="text-[11px] text-slate-400">{project.client_name} · {project.category}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {searchMatches.assets.length > 0 && (
+                  <div>
+                    <div className="px-2 pt-2 pb-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Creative Assets</div>
+                    {searchMatches.assets.map(asset => (
+                      <button key={asset.id} onClick={() => { setActiveTab("assets"); setSearchQuery(""); setIsSearchOpen(false); }} className={`w-full text-left p-2.5 rounded-xl flex items-center gap-3 hover:${dark ? "bg-white/5" : "bg-slate-50"}`}>
+                        <div className="h-8 w-8 rounded-xl bg-indigo-600/10 text-indigo-400 flex items-center justify-center">
+                          <Layers size={14} />
+                        </div>
+                        <div>
+                          <div className="text-[13px] font-medium">{asset.name}</div>
+                          <div className="text-[11px] text-slate-400">{asset.client_name} · {asset.asset_type}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {searchMatches.clients.length === 0 && searchMatches.projects.length === 0 && searchMatches.assets.length === 0 && (
+                  <div className="p-3 text-[13px] text-slate-400">No matching clients, campaigns, or assets</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Center: Navigation Pill Switcher (Shown when embedded) */}
+        {embedded && (
+          <div className="hidden md:flex items-center gap-1 rounded-xl p-1 border bg-slate-100/90 dark:bg-slate-900/90 border-slate-200/90 dark:border-slate-800 shadow-2xs">
             {[
               { id: "overview", label: "Overview" },
-              { id: "clients", label: `Clients (${clients.length})` },
-              { id: "projects", label: `Client Projects (${projects.length})` },
-              { id: "assets", label: `Client Assets (${assets.length})` },
-              { id: "mockups", label: "Live Ad Mockups" },
+              { id: "clients", label: "Clients" },
+              { id: "projects", label: "Projects" },
+              { id: "assets", label: "Assets" },
+              { id: "mockups", label: "Ad Mockups" },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`rounded-full px-3.5 py-1 text-xs font-medium transition ${
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                   activeTab === tab.id
-                    ? dark ? "bg-[#ffffff] text-[#0d1117]" : "bg-[#111111] text-[#ffffff]"
-                    : `${textSub} hover:text-black dark:hover:text-white`
+                    ? dark ? "bg-[#3758F9]/15 text-[#5475F9] font-semibold shadow-xs" : "bg-[#ECF2FE] text-[#3758F9] font-semibold shadow-xs"
+                    : `${textSub} hover:text-slate-900 dark:hover:text-white`
                 }`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
+        )}
 
-          {/* Top Actions */}
-          <div className="flex items-center gap-2">
-            {!readOnly && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setShowAddClientModal(true)}
-                  className={`hidden sm:flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition shadow-sm ${pillBlack}`}
-                >
-                  <span>+ Client</span>
-                  <ArrowUpRight size={13} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowAddProjectModal(true)}
-                  className={`hidden lg:flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition border ${pillOutline}`}
-                >
-                  <span>+ Project</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowAddAssetModal(true)}
-                  className={`hidden lg:flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium transition border ${pillOutline}`}
-                >
-                  <span>+ Asset</span>
-                </button>
-              </>
-            )}
-
-            {!embedded && (
-              <button
-                type="button"
-                onClick={handleToggleTheme}
-                className={`flex h-8 w-8 items-center justify-center rounded-full border ${pillOutline} transition`}
-                title="Toggle Theme"
-              >
-                {dark ? <Sun size={13} /> : <Moon size={13} />}
-              </button>
-            )}
-
+        {/* Right: Actions, Theme Toggle, Notifications, Profile */}
+        <div className="flex items-center gap-3">
+          {!readOnly && (
             <button
               type="button"
-              onClick={() => loadAllData(true)}
-              disabled={refreshing}
-              className={`flex h-8 w-8 items-center justify-center rounded-full border ${pillOutline} transition`}
-              title="Refresh Telemetry"
+              onClick={() => setShowAddClientModal(true)}
+              className="hidden sm:flex items-center gap-1.5 rounded-xl h-10 px-3.5 text-xs font-semibold bg-slate-900 hover:bg-black dark:bg-pink-600 dark:hover:bg-pink-500 text-white transition shadow-sm shrink-0"
             >
-              <RefreshCw size={13} className={refreshing ? "animate-spin" : ""} />
+              <Plus size={14} />
+              <span>Client</span>
             </button>
+          )}
 
-            {!embedded && onLogout && (
-              <button
-                type="button"
-                onClick={onLogout}
-                className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-stone-500 hover:text-red-500 transition"
-              >
-                <LogOut size={13} />
-              </button>
+          <button
+            type="button"
+            onClick={() => loadAllData(true)}
+            disabled={refreshing}
+            className="h-10 w-10 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs transition shrink-0"
+            title="Refresh Telemetry"
+          >
+            <RefreshCw size={15} className={refreshing ? "animate-spin text-pink-400" : ""} />
+          </button>
+
+          {/* Circular Theme Toggle Button (TailAdmin style) */}
+          <button
+            onClick={() => handleToggleTheme()}
+            type="button"
+            title={dark ? "Switch to Day Mode" : "Switch to Night Mode"}
+            className="h-10 w-10 rounded-full border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs transition shrink-0"
+          >
+            {dark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-600" />}
+          </button>
+
+          {/* Circular Notification Bell with Orange Dot (TailAdmin style) */}
+          <div ref={notifContainerRef} className="relative">
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              title="Notifications"
+              aria-label="View notifications"
+              className="h-10 w-10 rounded-full border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 shadow-2xs relative transition shrink-0"
+            >
+              <Bell size={18} />
+              {marketingAlerts.length > 0 && (
+                <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-[#f97316] ring-2 ring-white dark:ring-slate-900" />
+              )}
+            </button>
+            {notifOpen && (
+              <div className={`absolute right-0 top-12 w-[340px] rounded-2xl border shadow-2xl z-50 ${bgCard} overflow-hidden`}>
+                <div className={`p-4 border-b ${dark ? "border-slate-800" : "border-slate-100"}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="font-bold text-[14px]">Marketing Campaigns</div>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500/15 text-pink-500 border border-pink-500/30">
+                        ROAS
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400">{marketingAlerts.length} pending review</span>
+                  </div>
+                </div>
+                <div className="max-h-[300px] overflow-auto divide-y divide-slate-100 dark:divide-slate-800">
+                  {marketingAlerts.slice(0, 6).map((proj) => (
+                    <div key={proj.id} onClick={() => { setActiveTab("projects"); setNotifOpen(false); }} className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition flex items-start gap-2.5">
+                      <div className="w-2 h-2 rounded-full bg-pink-500 mt-1.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-100 truncate">{proj.title}</p>
+                        <p className="text-[11px] text-slate-400 truncate">{proj.client_name} · {proj.status}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {marketingAlerts.length === 0 && (
+                    <div className="p-6 text-center text-xs text-slate-400">All campaigns active 🎉</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* User Profile Pill (TailAdmin style: avatar + name + chevron) */}
+          <div ref={userMenuRef} className="relative">
+            <button
+              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+              className="flex items-center gap-2.5 pl-2 py-1 pr-1.5 rounded-full hover:bg-slate-50 dark:hover:bg-slate-800/60 transition group"
+            >
+              <div className="w-10 h-10 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-sm flex items-center justify-center overflow-hidden shrink-0 shadow-xs ring-1 ring-slate-900/10 dark:ring-white/20">
+                {currentUser?.name ? currentUser.name.split(" ").map((w: string) => w[0]).slice(0, 2).join("").toUpperCase() : "DM"}
+              </div>
+              <span className="hidden sm:inline text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-slate-900 dark:group-hover:text-white transition">
+                {currentUser?.name?.split(" ")[0] || "Marketing"}
+              </span>
+              <ChevronDown size={15} className={`text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-transform duration-200 ${userDropdownOpen ? "rotate-180" : ""}`} />
+            </button>
+            {userDropdownOpen && (
+              <div className={`absolute right-0 top-12 w-56 rounded-2xl border shadow-2xl z-50 p-2 ${bgCard}`}>
+                <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-1">
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{currentUser?.name || "Digital Marketing"}</p>
+                  <p className="text-[11px] text-slate-400 truncate">{currentUser?.email || "marketing@zootechx"}</p>
+                </div>
+                <button
+                  onClick={() => { setActiveTab("overview"); setUserDropdownOpen(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:${dark ? "bg-white/5" : "bg-slate-100"} transition`}
+                >
+                  <Settings size={14} />
+                  <span>Marketing Overview</span>
+                </button>
+                <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+                {onLogout && (
+                  <button
+                    onClick={() => { setUserDropdownOpen(false); onLogout(); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-500 hover:bg-rose-500/10 transition"
+                  >
+                    <LogOut size={14} />
+                    <span>Sign out</span>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
 
         {/* Mobile Navigation */}
-        <div className="mt-2.5 flex md:hidden items-center gap-1 overflow-x-auto pb-1 text-xs">
-          {["overview", "clients", "projects", "assets", "mockups"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab as any)}
-              className={`shrink-0 rounded-full px-3 py-1 capitalize font-medium ${
-                activeTab === tab ? "bg-[#111111] text-white dark:bg-white dark:text-black" : textSub
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        {mobileNavOpen && (
+          <div className="mt-2.5 flex md:hidden items-center gap-1 overflow-x-auto pb-1 text-xs border-t border-slate-200 dark:border-slate-800 pt-2">
+            {[
+              { id: "overview", label: "Overview" },
+              { id: "clients", label: "Clients" },
+              { id: "projects", label: "Projects" },
+              { id: "assets", label: "Assets" },
+              { id: "mockups", label: "Ad Mockups" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => { setActiveTab(tab.id as any); setMobileNavOpen(false); }}
+                className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-all ${
+                  activeTab === tab.id
+                    ? dark ? "bg-[#3758F9]/15 text-[#5475F9] font-semibold" : "bg-[#ECF2FE] text-[#3758F9] font-semibold"
+                    : textSub
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </header>
 
       {/* MAIN CONTAINER */}
-      <main className="mx-auto w-full max-w-7xl px-4 sm:px-8 py-8 sm:py-12 space-y-12">
+      <main className={`mx-auto w-full max-w-7xl ${embedded ? "px-4 sm:px-8 py-8 sm:py-12 space-y-12" : "flex-1 overflow-y-auto px-4 sm:px-8 py-8 sm:py-12 space-y-12"}`}>
         {/* ========================================================================= */}
         {/* EDITORIAL HERO SECTION (SHOWN ON OVERVIEW) */}
         {/* ========================================================================= */}
+        {/* ========================================================================= */}
+        {/* TAILADMIN MARKETING DASHBOARD OVERVIEW */}
+        {/* ========================================================================= */}
         {activeTab === "overview" && (
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          {/* Left Column: Quiet Luxury Headline & Actions */}
-          <div className="lg:col-span-6 space-y-6 pt-2">
-            <div className="space-y-1">
-              <h1 className="text-4xl sm:text-6xl lg:text-[68px] font-editorial leading-[1.04] tracking-tight">
-                <span className="block font-bold">Client Marketing,</span>
-                <span className="block font-normal italic">engineered for</span>
-                <span className="block font-normal italic">revenue scale.</span>
-              </h1>
+          <div className="space-y-6">
+            {/* ====== Top Metric Cards Group ====== */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 xl:grid-cols-3">
+              {/* Metric 1 */}
+              <div className="tail-card p-5 md:p-6">
+                <div className="tail-metric-icon mb-5">
+                  <Sparkles size={24} className="text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Avg. Client Rating</p>
+                <div className="mt-3 flex items-end justify-between">
+                  <h4 className="text-2xl font-bold text-slate-800 dark:text-white">7.8/10</h4>
+                  <div className="flex items-center gap-1.5">
+                    <span className="tail-badge-success">+20%</span>
+                    <span className="text-xs text-slate-400">Vs last month</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Metric 2 */}
+              <div className="tail-card p-5 md:p-6">
+                <div className="tail-metric-icon mb-5">
+                  <Users size={24} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Instagram Followers</p>
+                <div className="mt-3 flex items-end justify-between">
+                  <h4 className="text-2xl font-bold text-slate-800 dark:text-white">5,934</h4>
+                  <div className="flex items-center gap-1.5">
+                    <span className="tail-badge-danger">-3.59%</span>
+                    <span className="text-xs text-slate-400">Vs last month</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Metric 3 */}
+              <div className="tail-card p-5 md:p-6">
+                <div className="tail-metric-icon mb-5">
+                  <DollarSign size={24} className="text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Revenue</p>
+                <div className="mt-3 flex items-end justify-between">
+                  <h4 className="text-2xl font-bold text-slate-800 dark:text-white">
+                    ${overview?.totalMonthlyRetainer ? overview.totalMonthlyRetainer.toLocaleString() : "9,758"}
+                  </h4>
+                  <div className="flex items-center gap-1.5">
+                    <span className="tail-badge-success">+15%</span>
+                    <span className="text-xs text-slate-400">Vs last month</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <p className={`text-sm sm:text-base ${textSub} max-w-md leading-relaxed`}>
-              Complete client management suite. Track client retainers, active growth projects, multi-channel ad deliverables, and creative assets in one unified workspace.
-            </p>
-
-            {/* Action Pills */}
-            {!readOnly ? (
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddClientModal(true)}
-                  className={`flex items-center gap-2 rounded-full px-6 py-3 text-xs sm:text-sm font-medium transition shadow-sm ${pillBlack}`}
-                >
-                  <span>+ Onboard Client</span>
-                  <ArrowUpRight size={15} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowAddProjectModal(true)}
-                  className={`flex items-center gap-2 rounded-full px-5 py-3 text-xs sm:text-sm font-medium transition ${pillOutline}`}
-                >
-                  <FolderPlus size={15} />
-                  <span>+ Client Project</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowAddAssetModal(true)}
-                  className={`flex items-center gap-2 rounded-full px-5 py-3 text-xs sm:text-sm font-medium transition ${pillOutline}`}
-                >
-                  <FileText size={15} />
-                  <span>+ Client Asset</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <div className="inline-flex items-center gap-2 rounded-full px-4 py-2 border text-xs font-semibold bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
-                  <ShieldCheck size={14} />
-                  <span>Read-Only Visibility • Synchronized with Marketing Team</span>
-                </div>
-              </div>
-            )}
-
-            {/* Floating Capsule Badge */}
-            <div className="pt-4">
-              <div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 border shadow-sm ${whiteCard}`}>
-                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-black text-white dark:bg-white dark:text-black">
-                  <Check size={10} />
-                </div>
-                <span className="font-mono text-xs text-stone-500 dark:text-stone-400">
-                  {clients.length} Clients Managed • ${overview?.totalMonthlyRetainer.toLocaleString() || "55,300"}/mo Retainer • 100% On-Track
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Quiet Luxury Interactive Agency Mockup */}
-          <div className="lg:col-span-6">
-            <div className={`rounded-[32px] border ${sandCard} p-4 sm:p-6 space-y-4 shadow-sm relative`}>
-              {/* Notification capsule */}
-              <div className="flex items-center justify-end">
-                <div className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 border text-[11px] font-mono shadow-sm ${whiteCard}`}>
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-stone-600 dark:text-stone-300">
-                    Latest Asset: "{assets[0]?.name || "Apex Copy Matrix"}" in review
-                  </span>
-                </div>
-              </div>
-
-              {/* Main Workspace Frame */}
-              <div className="grid grid-cols-12 gap-3 items-start">
-                {/* Thin Vertical Navigation Pill Track */}
-                <div className={`col-span-2 sm:col-span-1 rounded-full border py-3 px-1 flex flex-col items-center gap-2.5 ${whiteCard}`}>
-                  {[
-                    { id: "overview", char: "o" },
-                    { id: "clients", char: "c" },
-                    { id: "projects", char: "p" },
-                    { id: "assets", char: "a" },
-                    { id: "mockups", char: "m" },
-                  ].map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id as any)}
-                      className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-mono uppercase font-semibold transition ${
-                        activeTab === item.id
-                          ? dark ? "bg-white text-black" : "bg-black text-white"
-                          : "text-stone-400 hover:text-black dark:hover:text-white"
-                      }`}
-                    >
-                      {item.char}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Dashboard Center Area */}
-                <div className="col-span-10 sm:col-span-11 space-y-3.5">
-                  {/* Top 3 Metric Blocks */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className={`rounded-2xl border p-3 text-center ${whiteCard}`}>
-                      <div className={`text-[10px] font-mono ${textMuted}`}>Retainers</div>
-                      <div className="text-base sm:text-lg font-bold font-mono mt-0.5">
-                        ${overview?.totalMonthlyRetainer.toLocaleString() || "55.3k"}
-                      </div>
-                      <div className="text-[10px] text-emerald-600 font-mono font-semibold">+18% MoM</div>
+            {/* ====== Main 12-Column Grid ====== */}
+            <div className="grid grid-cols-12 gap-4 md:gap-6">
+              {/* Left 8 Columns */}
+              <div className="col-span-12 xl:col-span-8 space-y-6">
+                {/* Chart Card: Impression & Data Traffic */}
+                <div className="tail-card p-5 sm:p-6">
+                  <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-800 dark:text-white">
+                        Impression & Data Traffic
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Jun 1, 2024 - Dec 1, 2025
+                      </p>
                     </div>
-
-                    <div className={`rounded-2xl border p-3 text-center ${whiteCard}`}>
-                      <div className={`text-[10px] font-mono ${textMuted}`}>Active Proj</div>
-                      <div className="text-base sm:text-lg font-bold font-mono mt-0.5">
-                        {overview?.activeProjects || projects.length}
-                      </div>
-                      <div className="text-[10px] text-emerald-600 font-mono font-semibold">5.4x avg roas</div>
-                    </div>
-
-                    <div className={`rounded-2xl border p-3 text-center ${whiteCard}`}>
-                      <div className={`text-[10px] font-mono ${textMuted}`}>Assets</div>
-                      <div className="text-base sm:text-lg font-bold font-mono mt-0.5">
-                        {overview?.totalAssets || assets.length}
-                      </div>
-                      <div className="text-[10px] text-stone-500 font-mono">
-                        {overview?.assetsApproved || 3} approved
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl font-bold text-slate-800 dark:text-white">
+                            ${overview?.totalMonthlyRetainer ? overview.totalMonthlyRetainer.toLocaleString() : "9,758.00"}
+                          </span>
+                          <span className="tail-badge-success">+7.96%</span>
+                        </div>
+                        <span className="text-xs text-slate-500 dark:text-slate-400 block text-right">
+                          Total Revenue
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Client Snapshot Quick Bar */}
-                  <div className={`rounded-2xl border p-3.5 space-y-2.5 ${whiteCard}`}>
-                    <div className="grid grid-cols-12 text-[10px] font-mono uppercase text-stone-400 pb-1 border-b border-inherit">
-                      <span className="col-span-6">Client & Industry</span>
-                      <span className="col-span-3">Retainer</span>
-                      <span className="col-span-3 text-right">Status</span>
+                  {/* Recharts Area Chart */}
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={[
+                          { month: "Jan", impressions: 4200, traffic: 2400 },
+                          { month: "Feb", impressions: 5300, traffic: 3100 },
+                          { month: "Mar", impressions: 6100, traffic: 3900 },
+                          { month: "Apr", impressions: 5800, traffic: 4200 },
+                          { month: "May", impressions: 7500, traffic: 5200 },
+                          { month: "Jun", impressions: 8400, traffic: 5900 },
+                          { month: "Jul", impressions: 7900, traffic: 6300 },
+                          { month: "Aug", impressions: 9200, traffic: 6800 },
+                          { month: "Sep", impressions: 9800, traffic: 7400 },
+                          { month: "Oct", impressions: 11200, traffic: 8100 },
+                          { month: "Nov", impressions: 12600, traffic: 8900 },
+                          { month: "Dec", impressions: 13900, traffic: 9758 },
+                        ]}
+                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient id="colorImpressions" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="colorTraffic" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={dark ? "#1e293b" : "#f1f5f9"} />
+                        <XAxis dataKey="month" stroke={dark ? "#64748b" : "#94a3b8"} fontSize={12} tickLine={false} />
+                        <YAxis stroke={dark ? "#64748b" : "#94a3b8"} fontSize={12} tickLine={false} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: dark ? "#0f172a" : "#ffffff",
+                            borderColor: dark ? "#1e293b" : "#e2e8f0",
+                            borderRadius: "0.75rem",
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                            fontSize: "12px"
+                          }}
+                        />
+                        <Area type="monotone" dataKey="impressions" stroke="#4f46e5" strokeWidth={2.5} fillOpacity={1} fill="url(#colorImpressions)" name="Impressions" />
+                        <Area type="monotone" dataKey="traffic" stroke="#06b6d4" strokeWidth={2.5} fillOpacity={1} fill="url(#colorTraffic)" name="Traffic" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Table Card: Featured Campaigns */}
+                <div className="tail-card overflow-hidden">
+                  <div className="flex items-center justify-between p-5 sm:px-6 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Featured Campaigns</h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Active growth deliverables across client accounts</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("projects")}
+                      className="tail-btn-secondary"
+                    >
+                      <span>View All</span>
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-slate-50/70 dark:bg-slate-800/30 text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800">
+                        <tr>
+                          <th className="py-3 px-5 sm:px-6 font-medium">Creator / Client</th>
+                          <th className="py-3 px-5 sm:px-6 font-medium">Campaign</th>
+                          <th className="py-3 px-5 sm:px-6 font-medium">Status</th>
+                          <th className="py-3 px-5 sm:px-6 font-medium text-right">ROAS Target</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {(projects.length > 0 ? projects.slice(0, 5) : [
+                          { id: "1", client_name: "Wilson Gouse", title: "Grow your brand by multi-channel", category: "Ads campaign", status: "ACTIVE", target_roas: 5.4 },
+                          { id: "2", client_name: "Terry Franci", title: "Make Better Ideas - Meta Launch", category: "Ads campaign", status: "IN_PROGRESS", target_roas: 4.8 },
+                          { id: "3", client_name: "Alena Franci", title: "Increase website traffic with SEO", category: "SEO campaign", status: "ACTIVE", target_roas: 6.2 },
+                          { id: "4", client_name: "Jocelyn Kenter", title: "Digital Marketing that converts", category: "Paid Search", status: "PLANNING", target_roas: 4.5 },
+                          { id: "5", client_name: "Brandon Philips", title: "Self branding & retargeting", category: "Ads campaign", status: "ACTIVE", target_roas: 5.0 },
+                        ]).map((p: any, idx: number) => (
+                          <tr key={p.id || idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition">
+                            <td className="py-3.5 px-5 sm:px-6">
+                              <div className="flex items-center gap-3">
+                                <div className="relative h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-xs text-slate-700 dark:text-slate-200 shrink-0">
+                                  {p.client_name ? p.client_name.split(" ").map((w: string) => w[0]).slice(0, 2).join("") : "DM"}
+                                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-slate-800 dark:text-white text-xs">{p.client_name}</p>
+                                  <span className="text-[11px] text-slate-400">{p.category || "Client Account"}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-5 sm:px-6">
+                              <div>
+                                <p className="font-medium text-slate-800 dark:text-white text-xs truncate max-w-xs">{p.title}</p>
+                                <span className="text-[11px] text-slate-400">Deliverable Strategy</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-5 sm:px-6">
+                              <span className={
+                                p.status === "ACTIVE" || p.status === "COMPLETED" || p.status === "APPROVED"
+                                  ? "tail-badge-success"
+                                  : p.status === "IN_PROGRESS" || p.status === "PLANNING"
+                                  ? "tail-badge-warning"
+                                  : "tail-badge-danger"
+                              }>
+                                {p.status === "ACTIVE" ? "Success" : p.status === "IN_PROGRESS" ? "Pending" : p.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5 sm:px-6 text-right font-semibold text-slate-800 dark:text-white text-xs">
+                              {p.target_roas ? `${p.target_roas}x` : "5.0x"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right 4 Columns */}
+              <div className="col-span-12 xl:col-span-4 space-y-6">
+                {/* Traffic Stats Card */}
+                <div className="tail-card p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-2 mb-5">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Traffic Stats</h3>
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl text-xs">
+                      {(["today", "week", "month"] as const).map((period) => (
+                        <button
+                          key={period}
+                          type="button"
+                          onClick={() => setTrafficPeriod(period)}
+                          className={`rounded-lg px-2.5 py-1 capitalize font-medium transition ${
+                            trafficPeriod === period
+                              ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-semibold"
+                              : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
+                          }`}
+                        >
+                          {period}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {/* Item 1 */}
+                    <div className="flex items-end justify-between py-4">
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">New Subscribers</p>
+                        <h4 className="text-2xl font-bold text-slate-800 dark:text-white">567K</h4>
+                        <span className="flex items-center gap-1 mt-1">
+                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">+3.85%</span>
+                          <span className="text-[11px] text-slate-400">then last Week</span>
+                        </span>
+                      </div>
+                      <div className="h-9 w-24">
+                        <svg className="w-full h-full text-emerald-500" viewBox="0 0 100 30" fill="none">
+                          <path d="M0 25 Q 25 5, 50 18 T 100 8" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                        </svg>
+                      </div>
                     </div>
 
-                    {clients.slice(0, 3).map((cl) => (
-                      <div key={cl.id} className="grid grid-cols-12 items-center text-xs font-mono">
-                        <div className="col-span-6 truncate">
-                          <span className="font-semibold text-stone-800 dark:text-stone-200">{cl.name}</span>
-                          <span className="block text-[10px] text-stone-400">{cl.industry}</span>
+                    {/* Item 2 */}
+                    <div className="flex items-end justify-between py-4">
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Conversion Rate</p>
+                        <h4 className="text-2xl font-bold text-slate-800 dark:text-white">276K</h4>
+                        <span className="flex items-center gap-1 mt-1">
+                          <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">-5.39%</span>
+                          <span className="text-[11px] text-slate-400">then last Week</span>
+                        </span>
+                      </div>
+                      <div className="h-9 w-24">
+                        <svg className="w-full h-full text-rose-500" viewBox="0 0 100 30" fill="none">
+                          <path d="M0 8 Q 25 22, 50 12 T 100 24" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Item 3 */}
+                    <div className="flex items-end justify-between py-4">
+                      <div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Page Bounce Rate</p>
+                        <h4 className="text-2xl font-bold text-slate-800 dark:text-white">285</h4>
+                        <span className="flex items-center gap-1 mt-1">
+                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">+12.74%</span>
+                          <span className="text-[11px] text-slate-400">then last Week</span>
+                        </span>
+                      </div>
+                      <div className="h-9 w-24">
+                        <svg className="w-full h-full text-emerald-500" viewBox="0 0 100 30" fill="none">
+                          <path d="M0 20 Q 25 10, 50 22 T 100 5" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Top Traffic Source Card */}
+                <div className="tail-card p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-2 mb-5">
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Top Traffic Source</h3>
+                    <button type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                      <Sliders size={16} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {[
+                      { name: "Google", pct: 79, color: "bg-indigo-600", dot: "bg-blue-500" },
+                      { name: "YouTube", pct: 55, color: "bg-red-500", dot: "bg-red-500" },
+                      { name: "Facebook", pct: 48, color: "bg-blue-600", dot: "bg-blue-600" },
+                      { name: "Instagram", pct: 48, color: "bg-pink-500", dot: "bg-pink-500" },
+                    ].map((item) => (
+                      <div key={item.name} className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-2.5 w-2.5 rounded-full ${item.dot}`} />
+                          <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{item.name}</span>
                         </div>
-                        <span className="col-span-3 text-stone-700 dark:text-stone-300 font-semibold">
-                          ${cl.monthly_retainer.toLocaleString()}
-                        </span>
-                        <span className="col-span-3 text-right">
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                            cl.status === "ACTIVE" ? pillBlack : pillSand
-                          }`}>
-                            {cl.status.toLowerCase()}
-                          </span>
-                        </span>
+                        <div className="flex items-center gap-3 w-40">
+                          <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                            <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.pct}%` }} />
+                          </div>
+                          <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 w-8 text-right">{item.pct}%</span>
+                        </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* Active Projects Tracker Capsule */}
-                  <div className={`rounded-2xl border p-3.5 flex items-start gap-3 ${whiteCard}`}>
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-black text-white dark:bg-white dark:text-black font-mono font-bold text-[10px]">
-                      PM
-                    </div>
-                    <div className="text-[11px] leading-snug">
-                      <div className="font-semibold text-stone-800 dark:text-stone-200">
-                        {projects.length} Active Growth Projects across {clients.length} Enterprise Clients
-                      </div>
-                      <div className="text-[10px] text-stone-500 font-mono mt-0.5">
-                        Deliverables synced • Weekly ROAS target tracking active
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        )}
-
-        {/* ========================================================================= */}
-        {/* VIEW 1: AGENCY OVERVIEW */}
-        {/* ========================================================================= */}
-        {activeTab === "overview" && overview && (
-          <section className="space-y-8 pt-4 border-t border-inherit">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold font-editorial">Agency Portfolio Overview</h2>
-                <p className={`text-xs ${textMuted}`}>Retainers, active growth deliverables, and creative assets under management.</p>
-              </div>
-              <div className="flex items-center gap-3 font-mono text-xs text-stone-500">
-                <span>Monthly Retainers: <strong className="text-black dark:text-white font-bold">${overview.totalMonthlyRetainer.toLocaleString()}</strong></span>
-                <span>•</span>
-                <span>Budget Managed: <strong className="text-black dark:text-white font-bold">${overview.totalBudgetManaged.toLocaleString()}</strong></span>
-              </div>
-            </div>
-
-            {/* 6 Key Client Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-              {[
-                { label: "Total Retainer Revenue", value: `$${overview.totalMonthlyRetainer.toLocaleString()}`, sub: "+18.4% MoM", positive: true },
-                { label: "Total Managed Budget", value: `$${overview.totalBudgetManaged.toLocaleString()}`, sub: "4 active campaigns", positive: true },
-                { label: "Active Clients", value: `${overview.activeClients} / ${overview.totalClients}`, sub: "100% retention", positive: true },
-                { label: "Growth Projects", value: `${overview.activeProjects}`, sub: "Delivering on schedule", positive: true },
-                { label: "Client Assets", value: `${overview.totalAssets}`, sub: `${overview.assetsApproved} approved`, positive: true },
-                { label: "Pending Approvals", value: `${overview.assetsInReview}`, sub: "Review required", positive: false },
-              ].map((kpi, idx) => (
-                <div key={idx} className={`rounded-2xl border p-4 ${whiteCard}`}>
-                  <div className={`text-[11px] font-mono ${textMuted}`}>{kpi.label}</div>
-                  <div className="text-xl font-bold font-mono mt-1 text-stone-900 dark:text-stone-100">{kpi.value}</div>
-                  <div className={`text-[10px] font-mono mt-1 font-semibold ${kpi.positive ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-                    {kpi.sub}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Client Retainer Distribution Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {overview.clientPortfolio.map((cp, idx) => (
-                <div key={idx} className={`rounded-3xl border p-5 space-y-3 ${whiteCard}`}>
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm font-sans text-stone-900 dark:text-stone-100 truncate">{cp.name}</span>
-                    <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                      ${cp.retainer.toLocaleString()}/mo
-                    </span>
-                  </div>
-                  <div className="space-y-1 text-xs font-mono text-stone-500">
-                    <div className="flex justify-between">
-                      <span>Active Projects:</span>
-                      <strong className="text-stone-800 dark:text-stone-200">{cp.projectCount}</strong>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Assets on File:</span>
-                      <strong className="text-stone-800 dark:text-stone-200">{cp.assetCount}</strong>
-                    </div>
-                  </div>
-                  <div className="pt-2">
+                  <div className="mt-6">
                     <button
                       type="button"
-                      onClick={() => {
-                        const target = clients.find((c) => c.name === cp.name);
-                        if (target) setSelectedClientId(target.id);
-                        setActiveTab("projects");
-                      }}
-                      className={`w-full rounded-full py-1 text-xs font-mono border transition ${pillOutline}`}
+                      onClick={() => setActiveTab("clients")}
+                      className="tail-btn-secondary w-full"
                     >
-                      view client projects ↗
+                      View All Client Sources
                     </button>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
-          </section>
+
+            {/* Client Retainer Distribution Row */}
+            {overview && (
+              <div className="tail-card p-5 sm:p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-white">Active Client Portfolio</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Monthly retainers, active growth deliverables, and creative assets under management</p>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Monthly Retainers: <strong className="text-slate-900 dark:text-white font-bold">${overview.totalMonthlyRetainer.toLocaleString()}</strong>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {overview.clientPortfolio.map((cp, idx) => (
+                    <div key={idx} className="tail-card p-4 space-y-3 border border-slate-200/80 dark:border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-slate-900 dark:text-white truncate">{cp.name}</span>
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                          ${cp.retainer.toLocaleString()}/mo
+                        </span>
+                      </div>
+                      <div className="space-y-1 text-xs text-slate-500">
+                        <div className="flex justify-between">
+                          <span>Projects:</span>
+                          <strong className="text-slate-700 dark:text-slate-300">{cp.projectCount}</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Assets:</span>
+                          <strong className="text-slate-700 dark:text-slate-300">{cp.assetCount}</strong>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const target = clients.find((c) => c.name === cp.name);
+                          if (target) setSelectedClientId(target.id);
+                          setActiveTab("projects");
+                        }}
+                        className="tail-btn-secondary w-full text-[11px] py-1.5"
+                      >
+                        View Projects
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* ========================================================================= */}
@@ -1552,6 +1960,7 @@ export default function DigitalMarketingWorkspace({
           </section>
         )}
       </main>
+      </div>
 
       {/* ========================================================================= */}
       {/* MODAL 1: ADD NEW CLIENT */}

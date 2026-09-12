@@ -355,12 +355,12 @@ export default function CredentialsVault({ dark = true }: { dark?: boolean }) {
     return notes.replace(/^\[[A-Z_]+\]\s*/, "");
   };
 
-  // Colors (Nocturne & Ivory Luxury Palette)
-  const bgCard = dark ? "bg-[#121826] border-[#1e293b] text-[#f1f5f9]" : "bg-white border-[#eee6da] text-[#1c1917] shadow-[0_4px_20px_-2px_rgba(180,155,120,0.08)]";
-  const inputBg = dark ? "bg-[#171f30] border-[#222d42] text-[#f1f5f9] placeholder-[#5a687d]" : "bg-[#fcfaf7] border-[#e5dcd0] text-[#1c1917] placeholder-[#a8a199]";
-  const mutedText = dark ? "text-[#8e9bb0]" : "text-[#78716c]";
-  const pillActive = dark ? "bg-[#171f30] text-[#cca45f] border border-[#cca45f]/40 shadow-sm font-semibold" : "bg-white text-[#a07432] border border-[#eee6da] shadow-sm font-semibold";
-  const pillInactive = dark ? "bg-[#121826] text-[#8e9bb0] hover:bg-[#171f30] hover:text-[#f1f5f9] border border-[#1e293b]" : "bg-[#f8f4ec] text-[#78716c] hover:bg-[#ede5d8] border border-[#eee6da]";
+  // Colors (TailAdmin Design System)
+  const bgCard = "tail-card";
+  const inputBg = dark ? "bg-[#090d16] border-slate-800 text-white placeholder-slate-500 focus:border-indigo-500" : "bg-white border-slate-200 text-slate-900 placeholder-slate-400 focus:border-indigo-500";
+  const mutedText = dark ? "text-slate-400" : "text-slate-500";
+  const pillActive = "bg-indigo-600 text-white shadow-xs font-bold";
+  const pillInactive = dark ? "bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700/50" : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200";
 
   return (
     <div className="w-full space-y-6">
@@ -369,19 +369,19 @@ export default function CredentialsVault({ dark = true }: { dark?: boolean }) {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className={`relative overflow-hidden rounded-3xl border p-6 lg:p-8 ${bgCard} shadow-xl`}
+        className="tail-card relative overflow-hidden p-6 lg:p-8"
       >
         {/* Ambient Glow */}
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-indigo-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 left-1/3 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
 
         <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
-              <ShieldCheck size={14} className="text-emerald-400" />
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-500 dark:text-emerald-400">
+              <ShieldCheck size={14} className="text-emerald-500 dark:text-emerald-400" />
               AES-256-GCM Encrypted at Rest • Zero-Knowledge Vault
             </div>
-            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">Credentials & Secrets Vault</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Credentials & Secrets Vault</h1>
             <p className={`mt-2 max-w-2xl text-sm ${mutedText}`}>
               Secure, centralized storage for your API keys, database credentials, server SSH logins, client portal passwords, and cloud accounts. Accessible only by you.
             </p>
@@ -391,9 +391,9 @@ export default function CredentialsVault({ dark = true }: { dark?: boolean }) {
             <button
               onClick={() => void load()}
               title="Refresh vault"
-              className={`flex h-11 w-11 items-center justify-center rounded-2xl border transition-transform hover:scale-105 ${dark ? "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10" : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"}`}
+              className="tail-btn-secondary flex h-10 w-10 items-center justify-center p-0"
             >
-              <RefreshCw size={17} className={loading ? "animate-spin text-indigo-400" : ""} />
+              <RefreshCw size={16} className={loading ? "animate-spin text-indigo-400" : ""} />
             </button>
 
             <button
@@ -401,9 +401,9 @@ export default function CredentialsVault({ dark = true }: { dark?: boolean }) {
                 setNotice(null);
                 setOpenModal(true);
               }}
-              className="flex h-11 items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 px-5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:opacity-95 hover:shadow-indigo-500/35 active:scale-95"
+              className="tail-btn-primary flex items-center gap-2"
             >
-              <Plus size={18} />
+              <Plus size={16} />
               <span>Add Credential</span>
             </button>
           </div>
@@ -411,42 +411,42 @@ export default function CredentialsVault({ dark = true }: { dark?: boolean }) {
 
         {/* STATS STRIP */}
         <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
-          <div className={`rounded-2xl border p-3 text-center ${dark ? "border-white/5 bg-white/[0.03]" : "border-slate-100 bg-slate-50"}`}>
-            <div className="text-xl font-bold">{items.length}</div>
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 p-3 text-center">
+            <div className="text-xl font-bold font-mono text-slate-900 dark:text-white">{items.length}</div>
             <div className={`text-[10px] font-semibold uppercase tracking-wider ${mutedText}`}>Total Stored</div>
           </div>
-          <div className={`rounded-2xl border p-3 text-center ${dark ? "border-white/5 bg-white/[0.03]" : "border-slate-100 bg-slate-50"}`}>
-            <div className="text-xl font-bold text-violet-400">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 p-3 text-center">
+            <div className="text-xl font-bold font-mono text-violet-500">
               {items.filter((i) => getItemCategory(i) === "API_KEY").length}
             </div>
             <div className={`text-[10px] font-semibold uppercase tracking-wider ${mutedText}`}>API Keys</div>
           </div>
-          <div className={`rounded-2xl border p-3 text-center ${dark ? "border-white/5 bg-white/[0.03]" : "border-slate-100 bg-slate-50"}`}>
-            <div className="text-xl font-bold text-amber-400">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 p-3 text-center">
+            <div className="text-xl font-bold font-mono text-amber-500">
               {items.filter((i) => getItemCategory(i) === "DATABASE").length}
             </div>
             <div className={`text-[10px] font-semibold uppercase tracking-wider ${mutedText}`}>Databases</div>
           </div>
-          <div className={`rounded-2xl border p-3 text-center ${dark ? "border-white/5 bg-white/[0.03]" : "border-slate-100 bg-slate-50"}`}>
-            <div className="text-xl font-bold text-cyan-400">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 p-3 text-center">
+            <div className="text-xl font-bold font-mono text-cyan-500">
               {items.filter((i) => getItemCategory(i) === "HOSTING").length}
             </div>
             <div className={`text-[10px] font-semibold uppercase tracking-wider ${mutedText}`}>Cloud / Host</div>
           </div>
-          <div className={`rounded-2xl border p-3 text-center ${dark ? "border-white/5 bg-white/[0.03]" : "border-slate-100 bg-slate-50"}`}>
-            <div className="text-xl font-bold text-emerald-400">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 p-3 text-center">
+            <div className="text-xl font-bold font-mono text-emerald-500">
               {items.filter((i) => getItemCategory(i) === "SERVER_SSH").length}
             </div>
             <div className={`text-[10px] font-semibold uppercase tracking-wider ${mutedText}`}>Servers</div>
           </div>
-          <div className={`rounded-2xl border p-3 text-center ${dark ? "border-white/5 bg-white/[0.03]" : "border-slate-100 bg-slate-50"}`}>
-            <div className="text-xl font-bold text-pink-400">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 p-3 text-center">
+            <div className="text-xl font-bold font-mono text-pink-500">
               {items.filter((i) => getItemCategory(i) === "PORTAL").length}
             </div>
             <div className={`text-[10px] font-semibold uppercase tracking-wider ${mutedText}`}>Portals</div>
           </div>
-          <div className={`rounded-2xl border p-3 text-center ${dark ? "border-white/5 bg-white/[0.03]" : "border-slate-100 bg-slate-50"}`}>
-            <div className="text-xl font-bold text-blue-400">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 p-3 text-center">
+            <div className="text-xl font-bold font-mono text-blue-500">
               {items.filter((i) => getItemCategory(i) === "EMAIL").length}
             </div>
             <div className={`text-[10px] font-semibold uppercase tracking-wider ${mutedText}`}>Email / Tools</div>

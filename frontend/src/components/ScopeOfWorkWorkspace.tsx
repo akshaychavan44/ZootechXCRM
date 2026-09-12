@@ -391,11 +391,11 @@ export default function ScopeOfWorkWorkspace({
   }, [sows, statusFilter, query]);
 
   // Styling Tokens
-  const cardBg = dark ? "bg-[#111622] border-[#222d42]" : "bg-white border-[#eee6da]";
-  const muted = dark ? "text-[#94a3b8]" : "text-[#78716c]";
+  const cardBg = dark ? "bg-black border-zinc-800" : "bg-white border-zinc-200";
+  const muted = dark ? "text-zinc-400" : "text-zinc-600";
   const inputBg = dark
-    ? "bg-[#171f30] border-[#222d42] text-[#f1f5f9] placeholder:text-[#64748b]"
-    : "bg-[#fbf8f3] border-[#e8dfd1] text-[#1c1917] placeholder:text-[#a8a29e]";
+    ? "bg-[#09090b] border-zinc-800 text-white placeholder:text-zinc-500 focus:border-zinc-500"
+    : "bg-white border-zinc-300 text-black placeholder:text-zinc-400 focus:border-black";
 
   return (
     <div className="space-y-6">
@@ -423,10 +423,10 @@ export default function ScopeOfWorkWorkspace({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className={`text-2xl font-bold tracking-tight ${dark ? "text-white" : "text-[#1c1917]"}`}>
+            <h1 className={`text-2xl font-bold tracking-tight ${dark ? "text-white" : "text-black"}`}>
               Scope of Work (SOW) Engine
             </h1>
-            <span className="rounded-full bg-[#cca45f]/15 border border-[#cca45f]/30 px-2.5 py-0.5 text-[11px] font-bold text-[#cca45f]">
+            <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold border ${dark ? "bg-zinc-900 border-zinc-700 text-zinc-300" : "bg-zinc-100 border-zinc-300 text-zinc-800"}`}>
               Company Template: {activeTemplate?.version_label || "v1.0"}
             </span>
           </div>
@@ -439,18 +439,14 @@ export default function ScopeOfWorkWorkspace({
             onClick={loadData}
             disabled={loading}
             title="Refresh list"
-            className={`h-10 w-10 rounded-xl border flex items-center justify-center transition ${
-              dark ? "border-[#222d42] hover:bg-white/5 text-[#cca45f]" : "border-[#eee6da] hover:bg-black/5 text-[#a07432]"
-            }`}
+            className="tail-btn-secondary flex h-9 w-9 items-center justify-center p-0"
           >
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
           </button>
           {!readOnly && (
             <button
               onClick={() => setShowCreateModal(true)}
-              className={`h-10 px-4 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md ${
-                dark ? "bg-[#cca45f] text-black hover:bg-[#d8b26e]" : "bg-[#a07432] text-white hover:bg-[#8f6426]"
-              }`}
+              className="tail-btn-primary flex items-center gap-2"
             >
               <Plus size={15} />
               <span>Generate SOW</span>
@@ -459,27 +455,44 @@ export default function ScopeOfWorkWorkspace({
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Summary KPI Cards - TailAdmin Metric style */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total SOWs", value: sows.length, color: "text-[#cca45f]" },
-          { label: "Approved Agreements", value: sows.filter((s) => s.status === "Approved").length, color: "text-emerald-400" },
+          { label: "Total SOWs", value: sows.length, icon: FileText, bg: "bg-indigo-500/10 text-indigo-500", tag: "Documents" },
+          { label: "Approved Agreements", value: sows.filter((s) => s.status === "Approved").length, icon: CheckCircle2, bg: "bg-emerald-500/10 text-emerald-500", tag: "Signed" },
           {
             label: "Pipeline Value",
             value: `₹${sows.reduce((acc, s) => acc + (Number(s.project_value) || 0), 0).toLocaleString()}`,
-            color: "text-blue-400",
+            icon: ArrowUpRight,
+            bg: "bg-blue-500/10 text-blue-500",
+            tag: "Commercials",
           },
-          { label: "Pending Client Review", value: sows.filter((s) => ["Generated", "Sent", "Viewed"].includes(s.status)).length, color: "text-amber-400" },
+          { label: "Pending Review", value: sows.filter((s) => ["Generated", "Sent", "Viewed"].includes(s.status)).length, icon: Clock, bg: "bg-amber-500/10 text-amber-500", tag: "Under Review" },
         ].map((item) => (
-          <div key={item.label} className={`rounded-2xl border p-4 ${cardBg} shadow-sm`}>
-            <div className={`text-[11px] font-semibold uppercase tracking-wider ${muted}`}>{item.label}</div>
-            <div className={`mt-2 text-2xl font-bold mono ${item.color}`}>{item.value}</div>
+          <div key={item.label} className="tail-card p-5 flex items-start justify-between">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                {item.label}
+              </span>
+              <h4 className="mt-2 text-2xl font-bold font-mono text-slate-900 dark:text-white">
+                {item.value}
+              </h4>
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
+                </span>
+                <span>• {item.tag}</span>
+              </div>
+            </div>
+            <div className={`tail-metric-icon ${item.bg}`}>
+              <item.icon size={22} />
+            </div>
           </div>
         ))}
       </div>
 
       {/* Filters and Search */}
-      <div className={`rounded-2xl border p-3.5 flex flex-col sm:flex-row gap-3 items-center justify-between ${cardBg}`}>
+      <div className="tail-card p-3 flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
           <Search size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${muted}`} />
           <input
@@ -496,10 +509,8 @@ export default function ScopeOfWorkWorkspace({
               onClick={() => setStatusFilter(st)}
               className={`px-3 py-1.5 rounded-xl text-[11px] font-semibold whitespace-nowrap transition ${
                 statusFilter === st
-                  ? dark
-                    ? "bg-[#cca45f] text-black shadow-sm font-bold"
-                    : "bg-[#a07432] text-white shadow-sm font-bold"
-                  : `${muted} hover:bg-white/5`
+                  ? "bg-indigo-600 text-white shadow-xs font-bold"
+                  : `${muted} hover:bg-slate-100 dark:hover:bg-slate-800`
               }`}
             >
               {st === "ALL" ? "All Statuses" : st}
@@ -509,10 +520,10 @@ export default function ScopeOfWorkWorkspace({
       </div>
 
       {/* SOW Table */}
-      <div className={`rounded-2xl border overflow-hidden ${cardBg} shadow-sm`}>
+      <div className="tail-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-xs">
-            <thead className={`border-b ${dark ? "bg-[#171f30]/60 border-[#222d42]" : "bg-[#f5eddf]/50 border-[#eee6da]"} ${muted} uppercase tracking-wider text-[10px]`}>
+            <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/40 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 font-bold">
               <tr>
                 <th className="p-3.5">Document Ref</th>
                 <th className="p-3.5">Client & Project</th>
@@ -523,7 +534,7 @@ export default function ScopeOfWorkWorkspace({
                 <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${dark ? "divide-[#222d42]" : "divide-[#eee6da]"}`}>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className={`p-12 text-center text-xs ${muted}`}>
@@ -535,21 +546,21 @@ export default function ScopeOfWorkWorkspace({
                   const badge = statusBadge[sow.status] || statusBadge.Draft;
                   return (
                     <tr key={sow.id} className={`hover:${dark ? "bg-white/[0.02]" : "bg-black/[0.01]"}`}>
-                      <td className="p-3.5 font-bold mono text-[#cca45f]">
+                      <td className={`p-3.5 font-bold mono ${dark ? "text-white" : "text-black"}`}>
                         {sow.sow_number}
                         <div className={`text-[10px] font-normal ${muted}`}>
                           {new Date(sow.created_at).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
                         </div>
                       </td>
                       <td className="p-3.5">
-                        <div className={`font-semibold ${dark ? "text-[#f1f5f9]" : "text-[#1c1917]"}`}>{sow.client_name}</div>
+                        <div className={`font-semibold ${dark ? "text-white" : "text-black"}`}>{sow.client_name}</div>
                         <div className={`text-[11px] ${muted}`}>{sow.project_name}</div>
                         {sow.client_company && sow.client_company !== sow.client_name && (
                           <div className={`text-[10px] ${muted}`}>{sow.client_company}</div>
                         )}
                       </td>
                       <td className="p-3.5">
-                        <span className="font-bold font-mono text-[#cca45f]">{sow.version_label || "v1.0"}</span>
+                        <span className={`font-bold font-mono ${dark ? "text-zinc-300" : "text-zinc-700"}`}>{sow.version_label || "v1.0"}</span>
                         <div className={`text-[10px] ${muted}`}>{sow.timeline_weeks} Weeks</div>
                       </td>
                       <td className="p-3.5">
@@ -577,7 +588,7 @@ export default function ScopeOfWorkWorkspace({
                         ) : !readOnly ? (
                           <button
                             onClick={() => handleGenerateShareLink(sow)}
-                            className={`text-[11px] ${muted} hover:text-[#cca45f] flex items-center gap-1`}
+                            className={`text-[11px] ${muted} hover:text-black dark:hover:text-white flex items-center gap-1`}
                           >
                             <Share2 size={12} />
                             <span>Generate</span>
@@ -592,7 +603,7 @@ export default function ScopeOfWorkWorkspace({
                             title="Preview Document"
                             onClick={() => setPreviewSow(sow)}
                             className={`p-1.5 rounded-lg border transition ${
-                              dark ? "border-[#222d42] hover:bg-white/5 text-[#cca45f]" : "border-[#eee6da] hover:bg-black/5 text-[#a07432]"
+                              dark ? "border-zinc-800 hover:bg-white/10 text-white" : "border-zinc-300 hover:bg-black/5 text-black"
                             }`}
                           >
                             <Eye size={13} />
@@ -773,9 +784,7 @@ export default function ScopeOfWorkWorkspace({
                   <button
                     type="submit"
                     disabled={saving}
-                    className={`h-9 px-5 rounded-xl text-xs font-semibold shadow transition disabled:opacity-50 ${
-                      dark ? "bg-[#cca45f] text-black hover:bg-[#d8b26e]" : "bg-[#a07432] text-white"
-                    }`}
+                    className="h-9 px-5 rounded-xl text-xs font-semibold btn-dark-gradient text-white shadow transition disabled:opacity-50"
                   >
                     {saving ? "Generating SOW..." : "Generate Scope of Work"}
                   </button>
@@ -863,9 +872,7 @@ export default function ScopeOfWorkWorkspace({
                   <button
                     type="submit"
                     disabled={saving}
-                    className={`h-9 px-5 rounded-xl text-xs font-semibold shadow transition disabled:opacity-50 ${
-                      dark ? "bg-[#cca45f] text-black hover:bg-[#d8b26e]" : "bg-[#a07432] text-white"
-                    }`}
+                    className="h-9 px-5 rounded-xl text-xs font-semibold btn-dark-gradient text-white shadow transition disabled:opacity-50"
                   >
                     {saving ? "Saving Revision..." : `Publish Revision v${(editSow.version || 1) + 1}.0`}
                   </button>
@@ -1045,13 +1052,13 @@ export default function ScopeOfWorkWorkspace({
               {/* Header */}
               <div className="flex items-center justify-between pb-4 border-b border-inherit">
                 <div className="flex items-center gap-3">
-                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${dark ? "bg-[#171f30] border-[#cca45f]/40 text-[#cca45f]" : "bg-[#f5eddf] border-[#a07432]/40 text-[#a07432]"}`}>
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center border ${dark ? "bg-zinc-900 border-zinc-700 text-white" : "bg-zinc-100 border-zinc-300 text-black"}`}>
                     <FileText size={20} />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-bold">{previewSow.sow_number}</h3>
-                      <span className="rounded-full bg-[#cca45f]/15 border border-[#cca45f]/30 px-2 py-0.2 text-[10px] font-bold text-[#cca45f]">
+                      <span className={`rounded-full px-2 py-0.2 text-[10px] font-bold border ${dark ? "bg-zinc-900 border-zinc-700 text-zinc-300" : "bg-zinc-100 border-zinc-300 text-zinc-800"}`}>
                         {previewSow.version_label || "v1.0"}
                       </span>
                     </div>
@@ -1087,7 +1094,7 @@ export default function ScopeOfWorkWorkspace({
               {/* Document Body */}
               <div className="flex-1 overflow-y-auto py-5 pr-1 space-y-5 print:p-0">
                 {/* Meta summary strip */}
-                <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl border ${dark ? "bg-[#090d16] border-[#1e293b]" : "bg-[#fcfaf7] border-[#ede5d8]"}`}>
+                <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl border ${dark ? "bg-[#09090b] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                   <div>
                     <div className={`text-[10px] uppercase font-bold tracking-wider ${muted}`}>Commercial Value</div>
                     <div className="text-sm font-bold text-emerald-400 mt-0.5">₹{Number(previewSow.project_value).toLocaleString()}</div>
@@ -1107,7 +1114,7 @@ export default function ScopeOfWorkWorkspace({
                 </div>
 
                 {/* Rendered markdown document */}
-                <div className={`p-6 rounded-2xl border ${dark ? "bg-[#0a0e17] border-[#1e293b] text-slate-200" : "bg-white border-[#eee6da] text-slate-800"}`}>
+                <div className={`p-6 rounded-2xl border ${dark ? "bg-black border-zinc-800 text-zinc-100" : "bg-white border-zinc-200 text-black"}`}>
                   <pre className="text-xs font-mono whitespace-pre-wrap leading-relaxed font-sans">
                     {previewSow.rendered_document}
                   </pre>
@@ -1115,15 +1122,15 @@ export default function ScopeOfWorkWorkspace({
 
                 {/* Version History if any */}
                 {previewSow.versions && previewSow.versions.length > 1 && (
-                  <div className={`p-4 rounded-2xl border ${dark ? "bg-[#090d16] border-[#1e293b]" : "bg-[#faf6ee] border-[#eee6da]"}`}>
+                  <div className={`p-4 rounded-2xl border ${dark ? "bg-[#09090b] border-zinc-800" : "bg-zinc-50 border-zinc-200"}`}>
                     <h4 className="text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <History size={14} className="text-[#cca45f]" />
+                      <History size={14} className={dark ? "text-zinc-400" : "text-zinc-600"} />
                       <span>Version Change History</span>
                     </h4>
                     <div className="space-y-1.5 text-xs">
                       {previewSow.versions.map((v) => (
                         <div key={v.version} className="flex items-center justify-between py-1 border-b border-inherit last:border-0">
-                          <span className="font-bold text-[#cca45f] font-mono">{v.version_label}</span>
+                          <span className={`font-bold font-mono ${dark ? "text-white" : "text-black"}`}>{v.version_label}</span>
                           <span className={muted}>₹{Number(v.project_value).toLocaleString()}</span>
                           <span className={muted}>{v.updated_by_name}</span>
                           <span className={muted}>{new Date(v.updated_at).toLocaleDateString()}</span>
